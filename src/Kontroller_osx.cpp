@@ -202,16 +202,11 @@ namespace {
    }
 
    MIDIEndpointRef findEndpoint() {
+      MIDIEndpointRef endpoint = 0;
       ItemCount deviceCount = MIDIGetNumberOfDevices();
 
       for (ItemCount i = 0; i < deviceCount; ++i) {
          MIDIDeviceRef device = MIDIGetDevice(i);
-
-         SInt32 offline = 0;
-         MIDIObjectGetIntegerProperty(device, kMIDIPropertyOffline, &offline);
-         if (offline) {
-            continue;
-         }
 
          CFStringRef name = nullptr;
          OSStatus nameResult = MIDIObjectGetStringProperty(device, kMIDIPropertyName, &name);
@@ -238,10 +233,16 @@ namespace {
             continue;
          }
 
-         return MIDIEntityGetSource(entity, 0);
+         endpoint = MIDIEntityGetSource(entity, 0);
+
+         SInt32 offline = 0;
+         MIDIObjectGetIntegerProperty(device, kMIDIPropertyOffline, &offline);
+         if (!offline) {
+            break; // Take the first online device (but fall back to an offline one)
+         }
       }
 
-      return 0;
+      return endpoint;
    }
 } // namespace
 
