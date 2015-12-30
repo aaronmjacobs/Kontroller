@@ -106,45 +106,45 @@ namespace {
       0xF0, 0x42, 0x40, 0x00, 0x01, 0x13, 0x00, 0x1F, 0x11, 0x00, 0xF7
    }};
 
-   const size_t kLedModeOffset = 16;
+   const size_t kLEDModeOffset = 16;
 
-   ControlID idForLed(KontrolLed led) {
+   ControlID idForLED(Kontroller::LED led) {
       switch (led) {
-         case KontrolLed::kCycle: return kCycle;
-         case KontrolLed::kRewind: return kRewind;
-         case KontrolLed::kFastForward: return kFastForward;
-         case KontrolLed::kStop: return kStop;
-         case KontrolLed::kPlay: return kPlay;
-         case KontrolLed::kRecord: return kRecord;
-         case KontrolLed::kCol1S: return kCol1S;
-         case KontrolLed::kCol1M: return kCol1M;
-         case KontrolLed::kCol1R: return kCol1R;
-         case KontrolLed::kCol2S: return kCol2S;
-         case KontrolLed::kCol2M: return kCol2M;
-         case KontrolLed::kCol2R: return kCol2R;
-         case KontrolLed::kCol3S: return kCol3S;
-         case KontrolLed::kCol3M: return kCol3M;
-         case KontrolLed::kCol3R: return kCol3R;
-         case KontrolLed::kCol4S: return kCol4S;
-         case KontrolLed::kCol4M: return kCol4M;
-         case KontrolLed::kCol4R: return kCol4R;
-         case KontrolLed::kCol5S: return kCol5S;
-         case KontrolLed::kCol5M: return kCol5M;
-         case KontrolLed::kCol5R: return kCol5R;
-         case KontrolLed::kCol6S: return kCol6S;
-         case KontrolLed::kCol6M: return kCol6M;
-         case KontrolLed::kCol6R: return kCol6R;
-         case KontrolLed::kCol7S: return kCol7S;
-         case KontrolLed::kCol7M: return kCol7M;
-         case KontrolLed::kCol7R: return kCol7R;
-         case KontrolLed::kCol8S: return kCol8S;
-         case KontrolLed::kCol8M: return kCol8M;
-         case KontrolLed::kCol8R: return kCol8R;
+         case Kontroller::LED::kCycle: return kCycle;
+         case Kontroller::LED::kRewind: return kRewind;
+         case Kontroller::LED::kFastForward: return kFastForward;
+         case Kontroller::LED::kStop: return kStop;
+         case Kontroller::LED::kPlay: return kPlay;
+         case Kontroller::LED::kRecord: return kRecord;
+         case Kontroller::LED::kCol1S: return kCol1S;
+         case Kontroller::LED::kCol1M: return kCol1M;
+         case Kontroller::LED::kCol1R: return kCol1R;
+         case Kontroller::LED::kCol2S: return kCol2S;
+         case Kontroller::LED::kCol2M: return kCol2M;
+         case Kontroller::LED::kCol2R: return kCol2R;
+         case Kontroller::LED::kCol3S: return kCol3S;
+         case Kontroller::LED::kCol3M: return kCol3M;
+         case Kontroller::LED::kCol3R: return kCol3R;
+         case Kontroller::LED::kCol4S: return kCol4S;
+         case Kontroller::LED::kCol4M: return kCol4M;
+         case Kontroller::LED::kCol4R: return kCol4R;
+         case Kontroller::LED::kCol5S: return kCol5S;
+         case Kontroller::LED::kCol5M: return kCol5M;
+         case Kontroller::LED::kCol5R: return kCol5R;
+         case Kontroller::LED::kCol6S: return kCol6S;
+         case Kontroller::LED::kCol6M: return kCol6M;
+         case Kontroller::LED::kCol6R: return kCol6R;
+         case Kontroller::LED::kCol7S: return kCol7S;
+         case Kontroller::LED::kCol7M: return kCol7M;
+         case Kontroller::LED::kCol7R: return kCol7R;
+         case Kontroller::LED::kCol8S: return kCol8S;
+         case Kontroller::LED::kCol8M: return kCol8M;
+         case Kontroller::LED::kCol8R: return kCol8R;
          default: KONTROLLER_ASSERT(false); return kTrackLeft;
       }
    }
 
-   float* getFloatVal(KontrolState &state, uint8_t id) {
+   float* getFloatVal(Kontroller::State &state, uint8_t id) {
       switch (id) {
          case kCol1Dial: return &state.columns[0].dial;
          case kCol1Slider: return &state.columns[0].slider;
@@ -166,7 +166,7 @@ namespace {
       }
    }
 
-   bool* getBoolVal(KontrolState &state, uint8_t id) {
+   bool* getBoolVal(Kontroller::State &state, uint8_t id) {
       switch (id) {
          case kTrackLeft: return &state.trackLeft;
          case kTrackRight: return &state.trackRight;
@@ -277,7 +277,7 @@ namespace {
       return endpoints;
    }
 
-   void enableLedControl(MIDIPortRef outputPort, MIDIEndpointRef destination, bool enable) {
+   void enableLEDControl(MIDIPortRef outputPort, MIDIEndpointRef destination, bool enable) {
       struct StatePacketList {
          MIDIPacketList list;
          std::array<uint8_t, sizeof(MIDIPacket)> padding; // Need two packets worth of space (one in the list above)
@@ -293,7 +293,7 @@ namespace {
 
       if (enable) {
          std::array<uint8_t, kMainSysex.size()> enableSysex(kMainSysex);
-         enableSysex[kLedModeOffset] = 0x01;
+         enableSysex[kLEDModeOffset] = 0x01;
          packet = MIDIPacketListAdd(&packetList.list, size, packet, 0, enableSysex.size(), enableSysex.data());
       } else {
          packet = MIDIPacketListAdd(&packetList.list, size, packet, 0, kMainSysex.size(), kMainSysex.data());
@@ -306,7 +306,7 @@ namespace {
       KONTROLLER_ASSERT(sendResult == noErr);
    }
 
-   void setLedOn(MIDIPortRef outputPort, MIDIEndpointRef destination, ControlID id, bool enable) {
+   void setLEDOn(MIDIPortRef outputPort, MIDIEndpointRef destination, ControlID id, bool enable) {
       MIDIPacketList packetList;
       MIDIPacket* packet = MIDIPacketListInit(&packetList);
 
@@ -322,7 +322,7 @@ namespace {
    }
 } // namespace
 
-struct KontrolImplData {
+struct Kontroller::ImplData {
    std::mutex mutex;
 
    MIDIClientRef client { 0 };
@@ -332,7 +332,7 @@ struct KontrolImplData {
 };
 
 Kontroller::Kontroller() {
-   data = std::unique_ptr<KontrolImplData>(new KontrolImplData);
+   data = std::unique_ptr<ImplData>(new ImplData);
 
    Endpoints endpoints = findEndpoint();
    KONTROLLER_ASSERT(endpoints.source && endpoints.destination);
@@ -358,17 +358,17 @@ Kontroller::~Kontroller() {
    }
 }
 
-KontrolState Kontroller::getState() const {
+Kontroller::State Kontroller::getState() const {
    std::lock_guard<std::mutex> lock(data->mutex);
    return state;
 }
 
-void Kontroller::enableLedControl(bool enable) {
-   ::enableLedControl(data->outputPort, data->destination, enable);
+void Kontroller::enableLEDControl(bool enable) {
+   ::enableLEDControl(data->outputPort, data->destination, enable);
 }
 
-void Kontroller::setLedOn(KontrolLed led, bool on) {
-   ::setLedOn(data->outputPort, data->destination, idForLed(led), on);
+void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
+   ::setLEDOn(data->outputPort, data->destination, idForLED(led), on);
 }
 
 void Kontroller::update(uint8_t id, uint8_t value) {

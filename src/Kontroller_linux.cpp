@@ -6,14 +6,14 @@ Kontroller::Kontroller() {
 Kontroller::~Kontroller() {
 }
 
-KontrolState Kontroller::getState() const {
+Kontroller::State Kontroller::getState() const {
    return state;
 }
 
-void Kontroller::enableLedControl(bool enable) {
+void Kontroller::enableLEDControl(bool enable) {
 }
 
-void Kontroller::setLedOn(KontrolLed led, bool on) {
+void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
 }
 
 void Kontroller::update(uint8_t id, uint8_t value) {
