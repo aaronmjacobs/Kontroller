@@ -10,5 +10,11 @@ KontrolState Kontroller::getState() const {
    return state;
 }
 
-void Kontroller::update(unsigned char id, unsigned char value) {
+void Kontroller::enableLedControl(bool enable) {
+}
+
+void Kontroller::setLedOn(KontrolLed led, bool on) {
+}
+
+void Kontroller::update(uint8_t id, uint8_t value) {
 }

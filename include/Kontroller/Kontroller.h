@@ -2,11 +2,41 @@
 #define KONTROLLER_H
 
 #include <array>
-#include <mutex>
+#include <cstdint>
+#include <memory>
 
-#ifdef __APPLE__
-#include <CoreMIDI/MIDIServices.h>
-#endif // __APPLE__
+enum class KontrolLed {
+   kCycle,
+   kRewind,
+   kFastForward,
+   kStop,
+   kPlay,
+   kRecord,
+   kCol1S,
+   kCol1M,
+   kCol1R,
+   kCol2S,
+   kCol2M,
+   kCol2R,
+   kCol3S,
+   kCol3M,
+   kCol3R,
+   kCol4S,
+   kCol4M,
+   kCol4R,
+   kCol5S,
+   kCol5M,
+   kCol5R,
+   kCol6S,
+   kCol6M,
+   kCol6R,
+   kCol7S,
+   kCol7M,
+   kCol7R,
+   kCol8S,
+   kCol8M,
+   kCol8R
+};
 
 struct KontrolColumn {
    float dial;
@@ -36,24 +66,26 @@ struct KontrolState {
    bool record;
 };
 
+struct KontrolImplData;
+
 class Kontroller {
 private:
    KontrolState state { 0 };
-   mutable std::mutex mutex;
-
-#ifdef __APPLE__
-   MIDIClientRef client { 0 };
-   MIDIPortRef port { 0 };
-#endif // __APPLE__
+   std::unique_ptr<KontrolImplData> data;
 
 public:
    Kontroller();
 
    ~Kontroller();
 
-   void update(unsigned char id, unsigned char value);
-
    KontrolState getState() const;
+
+   void enableLedControl(bool enable);
+
+   void setLedOn(KontrolLed led, bool on);
+
+   // Used internally, should not be called
+   void update(uint8_t id, uint8_t value);
 };
 
 #endif
