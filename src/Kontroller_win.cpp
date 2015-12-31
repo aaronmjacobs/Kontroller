@@ -1,5 +1,8 @@
 #include "Kontroller/Kontroller.h"
 
+struct Kontroller::ImplData {
+};
+
 Kontroller::Kontroller() {
 }
 
