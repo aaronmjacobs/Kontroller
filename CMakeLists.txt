@@ -39,7 +39,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 include_directories(${INC_DIR})
-add_executable(${PROJECT_NAME} ${SOURCES} ${INCLUDES})
+add_library(${PROJECT_NAME} ${SOURCES} ${INCLUDES})
 target_link_libraries(${PROJECT_NAME} ${LIBRARIES})
 
 # Compiler requirements
