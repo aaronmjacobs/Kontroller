@@ -10,6 +10,7 @@ set(LIBRARIES)
 
 list(APPEND INCLUDES
    "${INC_DIR}/Kontroller/Kontroller.h"
+   "${SRC_DIR}/KontrollerIDs.inc"
 )
 
 if(APPLE)
@@ -26,6 +27,9 @@ if(WIN32)
    list(APPEND SOURCES
       "${SRC_DIR}/Kontroller_win.cpp"
    )
+   list(APPEND LIBRARIES
+      "winmm"
+   )
 endif(WIN32)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -35,7 +39,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 include_directories(${INC_DIR})
-add_library(${PROJECT_NAME} ${SOURCES} ${INCLUDES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${INCLUDES})
 target_link_libraries(${PROJECT_NAME} ${LIBRARIES})
 
 # Compiler requirements
