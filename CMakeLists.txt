@@ -5,7 +5,12 @@ set(INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 set(SOURCES)
+set(INCLUDES)
 set(LIBRARIES)
+
+list(APPEND INCLUDES
+   "${INC_DIR}/Kontroller/Kontroller.h"
+)
 
 if(APPLE)
    list(APPEND SOURCES
@@ -30,7 +35,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 include_directories(${INC_DIR})
-add_library(${PROJECT_NAME} ${SOURCES})
+add_library(${PROJECT_NAME} ${SOURCES} ${INCLUDES})
 target_link_libraries(${PROJECT_NAME} ${LIBRARIES})
 
 # Compiler requirements
