@@ -1,7 +1,6 @@
 #include "Kontroller/Kontroller.h"
 
 #include <cassert>
-#include <mutex>
 #include <string>
 
 #include <Windows.h>
@@ -12,7 +11,10 @@
 
 #define KONTROLLER_ASSERT_RESULT(x) KONTROLLER_ASSERT((x) == MMSYSERR_NOERROR)
 
-#include "KontrollerIDs.inc"
+struct Kontroller::ImplData {
+   HMIDIIN inHandle { nullptr };
+   HMIDIOUT outHandle { nullptr };
+};
 
 namespace {
 
@@ -82,60 +84,37 @@ DeviceIDs findIDs() {
    return ids;
 }
 
+struct SendInfo {
+   HMIDIOUT outHandle;
+};
+
+void initializeInfo(const Kontroller::ImplData& implData, SendInfo* info) {
+   info->outHandle = implData.outHandle;
+}
+
+void finalizeInfo(SendInfo* info) {
+}
+
 template<size_t numBytes>
-void send(HMIDIOUT outHandle, std::array<uint8_t, numBytes> data) {
+void send(SendInfo* info, std::array<uint8_t, numBytes> data) {
    MIDIHDR header { 0 };
    header.lpData = reinterpret_cast<LPSTR>(data.data());
    header.dwBufferLength = data.size();
 
-   MMRESULT prepareResult = midiOutPrepareHeader(outHandle, &header, sizeof(header));
+   MMRESULT prepareResult = midiOutPrepareHeader(info->outHandle, &header, sizeof(header));
    KONTROLLER_ASSERT_RESULT(prepareResult);
 
-   MMRESULT messageResult = midiOutLongMsg(outHandle, &header, sizeof(header));
+   MMRESULT messageResult = midiOutLongMsg(info->outHandle, &header, sizeof(header));
    KONTROLLER_ASSERT_RESULT(messageResult);
 
    MMRESULT unprepareResult = MIDIERR_STILLPLAYING;
    while (unprepareResult == MIDIERR_STILLPLAYING) {
-      unprepareResult = midiOutUnprepareHeader(outHandle, &header, sizeof(header));
+      unprepareResult = midiOutUnprepareHeader(info->outHandle, &header, sizeof(header));
    }
    KONTROLLER_ASSERT_RESULT(unprepareResult);
 }
 
-void enableLEDControl(HMIDIOUT outHandle, bool enable) {
-   send(outHandle, kStartSysex);
-   send(outHandle, kSecondSysex);
-   send(outHandle, kStartSysex);
-
-   if (enable) {
-      constexpr size_t size = kMainSysex.size();
-      std::array<uint8_t, size> enableSysex(kMainSysex);
-      enableSysex[kLEDModeOffset] = 0x01;
-      send(outHandle, enableSysex);
-   } else {
-      send(outHandle, kMainSysex);
-   }
-
-   send(outHandle, kStartSysex);
-   send(outHandle, kEndSysex);
-}
-
-void setLEDOn(HMIDIOUT outHandle, ControlID id, bool enable) {
-   std::array<uint8_t, 3> data;
-   data[0] = 0xB0;
-   data[1] = id;
-   data[2] = enable ? 0x7F : 0x00;
-
-   send(outHandle, data);
-}
-
 } // namespace
-
-struct Kontroller::ImplData {
-   std::mutex mutex;
-
-   HMIDIIN inHandle { nullptr };
-   HMIDIOUT outHandle { nullptr };
-};
 
 Kontroller::Kontroller() {
    data = std::unique_ptr<ImplData>(new ImplData);
@@ -170,29 +149,4 @@ Kontroller::~Kontroller() {
    }
 }
 
-Kontroller::State Kontroller::getState() const {
-   std::lock_guard<std::mutex> lock(data->mutex);
-   return state;
-}
-
-void Kontroller::enableLEDControl(bool enable) {
-   ::enableLEDControl(data->outHandle, enable);
-}
-
-void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
-   ::setLEDOn(data->outHandle, idForLED(led), on);
-}
-
-void Kontroller::update(uint8_t id, uint8_t value) {
-   std::lock_guard<std::mutex> lock(data->mutex);
-
-   float *floatVal = getFloatVal(state, id);
-   if (floatVal) {
-      *floatVal = value / 127.0f;
-   } else {
-      bool *boolVal = getBoolVal(state, id);
-      KONTROLLER_ASSERT(boolVal); // If it isn't a dial or slider, it should be a button
-
-      *boolVal = value != 0;
-   }
-}
+#include "Kontroller_common.inc"

@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 
 class Kontroller {
 public:
@@ -68,10 +69,11 @@ public:
       bool record;
    };
 
-private:
    struct ImplData;
 
+private:
    State state { 0 };
+   mutable std::mutex mutex;
    std::unique_ptr<ImplData> data;
 
 public:

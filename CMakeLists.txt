@@ -10,7 +10,7 @@ set(LIBRARIES)
 
 list(APPEND INCLUDES
    "${INC_DIR}/Kontroller/Kontroller.h"
-   "${SRC_DIR}/KontrollerIDs.inc"
+   "${SRC_DIR}/Kontroller_common.inc"
 )
 
 if(APPLE)
