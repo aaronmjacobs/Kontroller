@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.1)
 project(Kontroller)
 
+option(KONTROLLER_BUILD_EXAMPLES "Build the Kontroller example programs" OFF)
+
 set(INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
@@ -21,8 +23,10 @@ if(APPLE)
       "${SRC_DIR}/Communicator_osx.cpp"
    )
    find_library(COREMIDI_LIBRARY CoreMidi)
+   find_library(COREFOUNDATION_LIBRARY CoreFoundation)
    list(APPEND LIBRARIES
       ${COREMIDI_LIBRARY}
+      ${COREFOUNDATION_LIBRARY}
    )
 endif(APPLE)
 
@@ -44,6 +48,10 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 include_directories(${INC_DIR})
 add_library(${PROJECT_NAME} ${SOURCES} ${INCLUDES})
 target_link_libraries(${PROJECT_NAME} ${LIBRARIES})
+
+if(KONTROLLER_BUILD_EXAMPLES)
+   add_subdirectory("examples")
+endif(KONTROLLER_BUILD_EXAMPLES)
 
 # Compiler requirements
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 11)
