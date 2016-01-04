@@ -8,14 +8,17 @@ set(SOURCES)
 set(INCLUDES)
 set(LIBRARIES)
 
+list(APPEND SOURCES
+   "${SRC_DIR}/Kontroller.cpp"
+)
+
 list(APPEND INCLUDES
    "${INC_DIR}/Kontroller/Kontroller.h"
-   "${SRC_DIR}/Kontroller_common.inc"
 )
 
 if(APPLE)
    list(APPEND SOURCES
-      "${SRC_DIR}/Kontroller_osx.cpp"
+      "${SRC_DIR}/Communicator_osx.cpp"
    )
    find_library(COREMIDI_LIBRARY CoreMidi)
    list(APPEND LIBRARIES
@@ -25,7 +28,7 @@ endif(APPLE)
 
 if(WIN32)
    list(APPEND SOURCES
-      "${SRC_DIR}/Kontroller_win.cpp"
+      "${SRC_DIR}/Communicator_win.cpp"
    )
    list(APPEND LIBRARIES
       "winmm"
@@ -34,7 +37,7 @@ endif(WIN32)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
    list(APPEND SOURCES
-      "${SRC_DIR}/Kontroller_linux.cpp"
+      "${SRC_DIR}/Communicator_linux.cpp"
    )
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 

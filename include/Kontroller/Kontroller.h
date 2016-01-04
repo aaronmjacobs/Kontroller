@@ -6,7 +6,45 @@
 #include <memory>
 #include <mutex>
 
+#if !defined(KONTROLLER_ASSERT)
+#  include <cassert>
+#  define KONTROLLER_ASSERT assert
+#endif
+
+class Kontroller;
+
+namespace CommunicatorCallback {
+
+void receiveMessage(Kontroller *kontroller, uint8_t id, uint8_t value);
+
+} // namespace CommunicatorCallback
+
 class Kontroller {
+private:
+   class Communicator {
+   private:
+      struct ImplData;
+
+      std::unique_ptr<ImplData> implData;
+
+      void appendToMessage(uint8_t* data, size_t numBytes);
+
+   public:
+      Communicator(Kontroller* kontroller);
+
+      ~Communicator();
+
+      void initializeMessage();
+
+      template<size_t numBytes>
+      void appendToMessage(std::array<uint8_t, numBytes> data) {
+         appendToMessage(data.data(), data.size());
+      }
+
+      void finalizeMessage();
+   };
+   friend void CommunicatorCallback::receiveMessage(Kontroller *kontroller, uint8_t id, uint8_t value);
+
 public:
    enum class LED {
       kCycle,
@@ -69,26 +107,21 @@ public:
       bool record;
    };
 
-   struct ImplData;
-
 private:
-   State state { 0 };
+   State state {};
    mutable std::mutex mutex;
-   std::unique_ptr<ImplData> data;
+   std::unique_ptr<Communicator> communicator;
+
+   void update(uint8_t id, uint8_t value);
 
 public:
    Kontroller();
-
-   ~Kontroller();
 
    State getState() const;
 
    void enableLEDControl(bool enable);
 
    void setLEDOn(LED led, bool on);
-
-   // Used internally, should not be called
-   void update(uint8_t id, uint8_t value);
 };
 
 #endif

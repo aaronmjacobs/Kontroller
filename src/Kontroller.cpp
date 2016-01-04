@@ -1,3 +1,5 @@
+#include "Kontroller/Kontroller.h"
+
 namespace {
 
 enum ControlID : uint8_t {
@@ -196,55 +198,10 @@ bool* getBoolVal(Kontroller::State &state, uint8_t id) {
    }
 }
 
-void initializeInfo(const Kontroller::ImplData& implData, SendInfo* info);
-
-void finalizeInfo(SendInfo* info);
-
-template<size_t numBytes>
-void send(SendInfo* info, std::array<uint8_t, numBytes> data);
-
 } // namespace
 
-Kontroller::State Kontroller::getState() const {
-   std::lock_guard<std::mutex> lock(mutex);
-   return state;
-}
-
-void Kontroller::enableLEDControl(bool enable) {
-   SendInfo info;
-   initializeInfo(*data, &info);
-
-   send(&info, kStartSysex);
-   send(&info, kSecondSysex);
-   send(&info, kStartSysex);
-
-   if (enable) {
-      constexpr size_t size = kMainSysex.size();
-      std::array<uint8_t, size> enableSysex(kMainSysex);
-      enableSysex[kLEDModeOffset] = 0x01;
-      send(&info, enableSysex);
-   } else {
-      send(&info, kMainSysex);
-   }
-
-   send(&info, kStartSysex);
-   send(&info, kEndSysex);
-
-   finalizeInfo(&info);
-}
-
-void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
-   std::array<uint8_t, 3> sendData;
-   sendData[0] = 0xB0;
-   sendData[1] = idForLED(led);
-   sendData[2] = on ? 0x7F : 0x00;
-
-   SendInfo info;
-   initializeInfo(*data, &info);
-
-   send(&info, sendData);
-
-   finalizeInfo(&info);
+Kontroller::Kontroller()
+   : communicator(new Communicator(this)) {
 }
 
 void Kontroller::update(uint8_t id, uint8_t value) {
@@ -259,4 +216,44 @@ void Kontroller::update(uint8_t id, uint8_t value) {
 
       *boolVal = value != 0;
    }
+}
+
+Kontroller::State Kontroller::getState() const {
+   std::lock_guard<std::mutex> lock(mutex);
+   return state;
+}
+
+void Kontroller::enableLEDControl(bool enable) {
+   communicator->initializeMessage();
+
+   communicator->appendToMessage(kStartSysex);
+   communicator->appendToMessage(kSecondSysex);
+   communicator->appendToMessage(kStartSysex);
+
+   if (enable) {
+      constexpr size_t size = kMainSysex.size();
+      std::array<uint8_t, size> enableSysex(kMainSysex);
+      enableSysex[kLEDModeOffset] = 0x01;
+      communicator->appendToMessage(enableSysex);
+   } else {
+      communicator->appendToMessage(kMainSysex);
+   }
+
+   communicator->appendToMessage(kStartSysex);
+   communicator->appendToMessage(kEndSysex);
+
+   communicator->finalizeMessage();
+}
+
+void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
+   std::array<uint8_t, 3> sendData;
+   sendData[0] = 0xB0;
+   sendData[1] = idForLED(led);
+   sendData[2] = on ? 0x7F : 0x00;
+
+   communicator->initializeMessage();
+
+   communicator->appendToMessage(sendData);
+
+   communicator->finalizeMessage();
 }

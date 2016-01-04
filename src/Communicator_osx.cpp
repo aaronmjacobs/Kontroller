@@ -2,33 +2,17 @@
 
 #include <CoreMIDI/MIDIServices.h>
 
-#include <cassert>
 #include <string>
-
-#if !defined(KONTROLLER_ASSERT)
-#  define KONTROLLER_ASSERT assert
-#endif
-
-struct Kontroller::ImplData {
-   MIDIClientRef client { 0 };
-   MIDIPortRef inputPort { 0 };
-   MIDIPortRef outputPort { 0 };
-   MIDIEndpointRef destination { 0 };
-};
 
 namespace {
 
 // Called on a separate thread
 void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon) {
-   Kontroller *kontroller = static_cast<Kontroller*>(readProcRefCon);
-   if (!kontroller) {
-      return;
-   }
-
    const MIDIPacket *packet = &pktlist->packet[0];
    for (UInt32 i = 0; i < pktlist->numPackets; ++i) {
       if (packet->length == 3) {
-         kontroller->update(packet->data[1], packet->data[2]);
+         CommunicatorCallback::receiveMessage(static_cast<Kontroller*>(readProcRefCon),
+                                              packet->data[1], packet->data[2]);
       }
       packet = MIDIPacketNext(packet);
    }
@@ -88,7 +72,21 @@ Endpoints findEndpoint() {
    return endpoints;
 }
 
-struct SendInfo {
+} // namespace
+
+namespace CommunicatorCallback {
+
+void receiveMessage(Kontroller *kontroller, uint8_t id, uint8_t value) {
+   if (kontroller) {
+      kontroller->update(id, value);
+   }
+}
+
+} // namespace CommunicatorCallback
+
+struct Kontroller::Communicator::ImplData {
+   MIDIClientRef client { 0 };
+   MIDIPortRef inputPort { 0 };
    MIDIPortRef outputPort { 0 };
    MIDIEndpointRef destination { 0 };
 
@@ -99,51 +97,44 @@ struct SendInfo {
    MIDIPacket* lastPacket { nullptr };
 };
 
-void initializeInfo(const Kontroller::ImplData& implData, SendInfo* info) {
-   info->outputPort = implData.outputPort;
-   info->destination = implData.destination;
-
-   info->lastPacket = MIDIPacketListInit(&info->list);
-   KONTROLLER_ASSERT(info->lastPacket);
-}
-
-void finalizeInfo(SendInfo* info) {
-   OSStatus sendResult = MIDISend(info->outputPort, info->destination, &info->list);
-   KONTROLLER_ASSERT(sendResult == noErr);
-}
-
-template<size_t numBytes>
-void send(SendInfo* info, std::array<uint8_t, numBytes> data) {
-   info->lastPacket = MIDIPacketListAdd(&info->list, info->padding.size(), info->lastPacket, 0, data.size(), data.data());
-}
-
-} // namespace
-
-Kontroller::Kontroller() {
-   data = std::unique_ptr<ImplData>(new ImplData);
-
+Kontroller::Communicator::Communicator(Kontroller* kontroller)
+   : implData(new ImplData) {
    Endpoints endpoints = findEndpoint();
    KONTROLLER_ASSERT(endpoints.source && endpoints.destination);
-   data->destination = endpoints.destination;
+   implData->destination = endpoints.destination;
 
-   OSStatus clientResult = MIDIClientCreate(CFSTR("Kontroller client"), nullptr, nullptr, &data->client);
+   OSStatus clientResult = MIDIClientCreate(CFSTR("Kontroller client"), nullptr, nullptr, &implData->client);
    KONTROLLER_ASSERT(clientResult == noErr);
 
-   OSStatus inputPortResult = MIDIInputPortCreate(data->client, CFSTR("Kontroller input port"),
-                                                  midiInputCallback, this, &data->inputPort);
+   OSStatus inputPortResult = MIDIInputPortCreate(implData->client, CFSTR("Kontroller input port"),
+                                                  midiInputCallback, kontroller, &implData->inputPort);
    KONTROLLER_ASSERT(inputPortResult == noErr);
 
-   OSStatus outputPortResult = MIDIOutputPortCreate(data->client, CFSTR("Kontroller output port"), &data->outputPort);
+   OSStatus outputPortResult = MIDIOutputPortCreate(implData->client, CFSTR("Kontroller output port"),
+                                                    &implData->outputPort);
    KONTROLLER_ASSERT(outputPortResult == noErr);
 
-   OSStatus connectResult = MIDIPortConnectSource(data->inputPort, endpoints.source, nullptr);
+   OSStatus connectResult = MIDIPortConnectSource(implData->inputPort, endpoints.source, nullptr);
    KONTROLLER_ASSERT(connectResult == noErr);
 }
 
-Kontroller::~Kontroller() {
-   if (data->client) {
-      MIDIClientDispose(data->client); // Closes the ports as well
+Kontroller::Communicator::~Communicator() {
+   if (implData->client) {
+      MIDIClientDispose(implData->client); // Closes the ports as well
    }
 }
 
-#include "Kontroller_common.inc"
+void Kontroller::Communicator::initializeMessage() {
+   implData->lastPacket = MIDIPacketListInit(&implData->list);
+   KONTROLLER_ASSERT(implData->lastPacket);
+}
+
+void Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
+   implData->lastPacket = MIDIPacketListAdd(&implData->list, implData->padding.size(), implData->lastPacket,
+                                            0, numBytes, data);
+}
+
+void Kontroller::Communicator::finalizeMessage() {
+   OSStatus sendResult = MIDISend(implData->outputPort, implData->destination, &implData->list);
+   KONTROLLER_ASSERT(sendResult == noErr);
+}
