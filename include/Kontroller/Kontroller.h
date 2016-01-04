@@ -108,7 +108,9 @@ public:
    };
 
 private:
-   State state {};
+   State current {};
+   State currentNewButtons {};
+   State next {};
    mutable std::mutex mutex;
    std::unique_ptr<Communicator> communicator;
 
@@ -117,7 +119,9 @@ private:
 public:
    Kontroller();
 
-   State getState() const;
+   const State& getState(bool onlyNewButtons = false) const;
+
+   void poll();
 
    void enableLEDControl(bool enable);
 

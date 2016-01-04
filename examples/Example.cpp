@@ -134,7 +134,8 @@ int main(int argc, char *argv[]) {
       displayFunctions[displayFuncIndex](&kontroller);
 
       std::this_thread::sleep_for(std::chrono::milliseconds(kSleepTime));
-      state = kontroller.getState();
+      kontroller.poll();
+      state = kontroller.getState(true);
    }
 
    for (Kontroller::LED led : smrLEDs) {

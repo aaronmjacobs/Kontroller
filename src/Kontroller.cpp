@@ -207,20 +207,45 @@ Kontroller::Kontroller()
 void Kontroller::update(uint8_t id, uint8_t value) {
    std::lock_guard<std::mutex> lock(mutex);
 
-   float *floatVal = getFloatVal(state, id);
+   float *floatVal = getFloatVal(next, id);
    if (floatVal) {
       *floatVal = value / 127.0f;
    } else {
-      bool *boolVal = getBoolVal(state, id);
+      bool *boolVal = getBoolVal(next, id);
       KONTROLLER_ASSERT(boolVal); // If it isn't a dial or slider, it should be a button
 
       *boolVal = value != 0;
    }
 }
 
-Kontroller::State Kontroller::getState() const {
+const Kontroller::State& Kontroller::getState(bool onlyNewButtons) const {
+   return onlyNewButtons ? currentNewButtons : current;
+}
+
+#define KONTROLLER_SET_ONLY_NEW(name) currentNewButtons.name = next.name && !current.name
+
+void Kontroller::poll() {
    std::lock_guard<std::mutex> lock(mutex);
-   return state;
+
+   currentNewButtons = next;
+   KONTROLLER_SET_ONLY_NEW(trackLeft);
+   KONTROLLER_SET_ONLY_NEW(trackRight);
+   KONTROLLER_SET_ONLY_NEW(cycle);
+   KONTROLLER_SET_ONLY_NEW(markerSet);
+   KONTROLLER_SET_ONLY_NEW(markerLeft);
+   KONTROLLER_SET_ONLY_NEW(markerRight);
+   KONTROLLER_SET_ONLY_NEW(rewind);
+   KONTROLLER_SET_ONLY_NEW(fastForward);
+   KONTROLLER_SET_ONLY_NEW(stop);
+   KONTROLLER_SET_ONLY_NEW(play);
+   KONTROLLER_SET_ONLY_NEW(record);
+   for (size_t i = 0; i < next.columns.size(); ++i) {
+      KONTROLLER_SET_ONLY_NEW(columns[i].s);
+      KONTROLLER_SET_ONLY_NEW(columns[i].m);
+      KONTROLLER_SET_ONLY_NEW(columns[i].r);
+   }
+
+   current = next;
 }
 
 void Kontroller::enableLEDControl(bool enable) {
