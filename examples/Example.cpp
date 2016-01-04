@@ -101,12 +101,36 @@ void explode(Kontroller* kontroller) {
    }
 }
 
+void followSliders(Kontroller* kontroller) {
+   Kontroller::State state = kontroller->getState();
+
+   for (int i = 0; i < smrLEDs.size(); i += 3) {
+      int col = i / 3;
+      float val = state.columns[col].slider;
+
+      bool s = val > 0.75f;
+      bool m = val > 0.5f;
+      bool r = val > 0.25f;
+
+      kontroller->setLEDOn(smrLEDs[i + 0], s);
+      kontroller->setLEDOn(smrLEDs[i + 1], m);
+      kontroller->setLEDOn(smrLEDs[i + 2], r);
+   }
+}
+
 typedef void (*DisplayFunc)(Kontroller*);
 
-std::array<DisplayFunc, 2> displayFunctions {
+std::array<DisplayFunc, 3> displayFunctions {
    doTheWave,
-   explode
+   explode,
+   followSliders
 };
+
+void clearLEDs(Kontroller *kontroller) {
+   for (Kontroller::LED led : smrLEDs) {
+      kontroller->setLEDOn(led, false);
+   }
+}
 
 } // namespace
 
@@ -121,6 +145,11 @@ int main(int argc, char *argv[]) {
    while (!state.stop) {
       if (state.cycle) {
          controlEnabled = !controlEnabled;
+
+         if (!controlEnabled) {
+            clearLEDs(&kontroller);
+         }
+
          kontroller.enableLEDControl(controlEnabled);
       }
 
@@ -138,9 +167,7 @@ int main(int argc, char *argv[]) {
       state = kontroller.getState(true);
    }
 
-   for (Kontroller::LED led : smrLEDs) {
-      kontroller.setLEDOn(led, false);
-   }
+   clearLEDs(&kontroller);
    kontroller.enableLEDControl(false);
 
    return 0;
