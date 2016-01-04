@@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
    Kontroller::State state = kontroller.getState();
    int displayFuncIndex = 0;
 
-   static bool controlEnabled = false;
+   bool controlEnabled = false;
    kontroller.enableLEDControl(controlEnabled);
 
    while (!state.stop) {
