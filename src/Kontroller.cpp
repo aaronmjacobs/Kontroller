@@ -1,4 +1,5 @@
 #include "Kontroller/Kontroller.h"
+#include "Communicator.h"
 
 namespace {
 
@@ -202,6 +203,11 @@ bool* getBoolVal(Kontroller::State &state, uint8_t id) {
 
 Kontroller::Kontroller()
    : communicator(new Communicator(this)) {
+}
+
+// This must be defined here so that the default deleter can be used for Kontroller::Communicator (which is an
+// incomplete type in Kontroller.h)
+Kontroller::~Kontroller() {
 }
 
 void Kontroller::update(uint8_t id, uint8_t value) {

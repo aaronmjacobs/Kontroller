@@ -1,4 +1,5 @@
 #include "Kontroller/Kontroller.h"
+#include "Communicator.h"
 
 #include <CoreMIDI/MIDIServices.h>
 
@@ -11,8 +12,7 @@ void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCon, void
    const MIDIPacket *packet = &pktlist->packet[0];
    for (UInt32 i = 0; i < pktlist->numPackets; ++i) {
       if (packet->length == 3) {
-         CommunicatorCallback::receiveMessage(static_cast<Kontroller*>(readProcRefCon),
-                                              packet->data[1], packet->data[2]);
+         reinterpret_cast<Kontroller::Communicator*>(readProcRefCon)->onMessageReceived(packet->data[1], packet->data[2]);
       }
       packet = MIDIPacketNext(packet);
    }
@@ -74,16 +74,6 @@ Endpoints findEndpoint() {
 
 } // namespace
 
-namespace CommunicatorCallback {
-
-void receiveMessage(Kontroller *kontroller, uint8_t id, uint8_t value) {
-   if (kontroller) {
-      kontroller->update(id, value);
-   }
-}
-
-} // namespace CommunicatorCallback
-
 struct Kontroller::Communicator::ImplData {
    MIDIClientRef client { 0 };
    MIDIPortRef inputPort { 0 };
@@ -98,7 +88,7 @@ struct Kontroller::Communicator::ImplData {
 };
 
 Kontroller::Communicator::Communicator(Kontroller* kontroller)
-   : implData(new ImplData) {
+   : implData(new ImplData), kontroller(kontroller) {
    Endpoints endpoints = findEndpoint();
    KONTROLLER_ASSERT(endpoints.source && endpoints.destination);
    implData->destination = endpoints.destination;
@@ -107,7 +97,7 @@ Kontroller::Communicator::Communicator(Kontroller* kontroller)
    KONTROLLER_ASSERT(clientResult == noErr);
 
    OSStatus inputPortResult = MIDIInputPortCreate(implData->client, CFSTR("Kontroller input port"),
-                                                  midiInputCallback, kontroller, &implData->inputPort);
+                                                  midiInputCallback, this, &implData->inputPort);
    KONTROLLER_ASSERT(inputPortResult == noErr);
 
    OSStatus outputPortResult = MIDIOutputPortCreate(implData->client, CFSTR("Kontroller output port"),

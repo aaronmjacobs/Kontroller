@@ -1,4 +1,5 @@
 #include "Kontroller/Kontroller.h"
+#include "Communicator.h"
 
 #include <Windows.h>
 
@@ -24,7 +25,7 @@ void CALLBACK midiInputCallback(HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance
    }
 
    std::array<uint8_t, 3> values(decode(dwParam1));
-   CommunicatorCallback::receiveMessage(reinterpret_cast<Kontroller*>(dwInstance), values[1], values[2]);
+   reinterpret_cast<Kontroller::Communicator*>(dwInstance)->onMessageReceived(values[1], values[2]);
 }
 
 struct DeviceIDs {
@@ -72,33 +73,23 @@ DeviceIDs findIDs() {
 
 } // namespace
 
-namespace CommunicatorCallback {
-
-void receiveMessage(Kontroller *kontroller, uint8_t id, uint8_t value) {
-   if (kontroller) {
-      kontroller->update(id, value);
-   }
-}
-
-} // namespace CommunicatorCallback
-
 struct Kontroller::Communicator::ImplData {
    HMIDIIN inHandle { nullptr };
    HMIDIOUT outHandle { nullptr };
 };
 
 Kontroller::Communicator::Communicator(Kontroller* kontroller)
-   : implData(new ImplData) {
+   : implData(new ImplData), kontroller(kontroller) {
    DeviceIDs deviceIDs = findIDs();
    KONTROLLER_ASSERT(deviceIDs.inID != DeviceIDs::kInvalidID && deviceIDs.outID != DeviceIDs::kInvalidID);
 
    MMRESULT inOpenResult = midiInOpen(&implData->inHandle, deviceIDs.inID,
                                       reinterpret_cast<DWORD_PTR>(midiInputCallback),
-                                      reinterpret_cast<DWORD_PTR>(kontroller), CALLBACK_FUNCTION);
+                                      reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
    KONTROLLER_ASSERT_RESULT(inOpenResult);
 
    MMRESULT outOpenResult = midiOutOpen(&implData->outHandle, deviceIDs.outID, 0,
-                                        reinterpret_cast<DWORD_PTR>(kontroller), CALLBACK_NULL);
+                                        reinterpret_cast<DWORD_PTR>(this), CALLBACK_NULL);
    KONTROLLER_ASSERT_RESULT(outOpenResult);
 
    MMRESULT inStartResult = midiInStart(implData->inHandle);

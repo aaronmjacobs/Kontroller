@@ -1,20 +1,11 @@
 #include "Kontroller/Kontroller.h"
-
-namespace CommunicatorCallback {
-
-void receiveMessage(Kontroller *kontroller, uint8_t id, uint8_t value) {
-   if (kontroller) {
-      kontroller->update(id, value);
-   }
-}
-
-} // namespace CommunicatorCallback
+#include "Communicator.h"
 
 struct Kontroller::Communicator::ImplData {
 };
 
 Kontroller::Communicator::Communicator(Kontroller* kontroller)
-   : implData(new ImplData) {
+   : implData(new ImplData), kontroller(kontroller) {
 }
 
 Kontroller::Communicator::~Communicator() {
