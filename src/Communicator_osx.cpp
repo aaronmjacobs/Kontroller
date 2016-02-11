@@ -23,7 +23,7 @@ struct Endpoints {
    MIDIEndpointRef destination;
 };
 
-Endpoints findEndpoint() {
+Endpoints findEndpoints(const char* deviceName) {
    Endpoints endpoints { 0 };
    ItemCount deviceCount = MIDIGetNumberOfDevices();
 
@@ -40,7 +40,7 @@ Endpoints findEndpoint() {
       if (!cstr) {
          continue;
       }
-      if (std::string(cstr) != "nanoKONTROL2") {
+      if (std::string(cstr) != deviceName) {
          continue;
       }
 
@@ -89,42 +89,81 @@ struct Kontroller::Communicator::ImplData {
 
 Kontroller::Communicator::Communicator(Kontroller* kontroller)
    : implData(new ImplData), kontroller(kontroller) {
-   Endpoints endpoints = findEndpoint();
-   KONTROLLER_ASSERT(endpoints.source && endpoints.destination);
-   implData->destination = endpoints.destination;
-
-   OSStatus clientResult = MIDIClientCreate(CFSTR("Kontroller client"), nullptr, nullptr, &implData->client);
-   KONTROLLER_ASSERT(clientResult == noErr);
-
-   OSStatus inputPortResult = MIDIInputPortCreate(implData->client, CFSTR("Kontroller input port"),
-                                                  midiInputCallback, this, &implData->inputPort);
-   KONTROLLER_ASSERT(inputPortResult == noErr);
-
-   OSStatus outputPortResult = MIDIOutputPortCreate(implData->client, CFSTR("Kontroller output port"),
-                                                    &implData->outputPort);
-   KONTROLLER_ASSERT(outputPortResult == noErr);
-
-   OSStatus connectResult = MIDIPortConnectSource(implData->inputPort, endpoints.source, nullptr);
-   KONTROLLER_ASSERT(connectResult == noErr);
 }
 
 Kontroller::Communicator::~Communicator() {
+   disconnect();
+}
+
+bool Kontroller::Communicator::isConnected() const {
+   return implData->client && implData->inputPort && implData->outputPort && implData->destination;
+}
+
+bool Kontroller::Communicator::connect() {
+   if (isConnected()) {
+      return true;
+   }
+
+   bool success = false;
+   do {
+      Endpoints endpoints = findEndpoints(Kontroller::kDeviceName);
+      if (!endpoints.source || !endpoints.destination) {
+         break;
+      }
+      implData->destination = endpoints.destination;
+
+      OSStatus clientResult = MIDIClientCreate(CFSTR("Kontroller client"), nullptr, nullptr, &implData->client);
+      if (clientResult != noErr) {
+         break;
+      }
+
+      OSStatus inputPortResult = MIDIInputPortCreate(implData->client, CFSTR("Kontroller input port"),
+                                                     midiInputCallback, this, &implData->inputPort);
+      if (inputPortResult != noErr) {
+         break;
+      }
+
+      OSStatus outputPortResult = MIDIOutputPortCreate(implData->client, CFSTR("Kontroller output port"),
+                                                       &implData->outputPort);
+      if (outputPortResult != noErr) {
+         break;
+      }
+
+      OSStatus connectResult = MIDIPortConnectSource(implData->inputPort, endpoints.source, nullptr);
+      if (connectResult != noErr) {
+         break;
+      }
+
+      success = true;
+   } while(false);
+
+   if (!success) {
+      disconnect();
+   }
+
+   return success;
+}
+
+void Kontroller::Communicator::disconnect() {
    if (implData->client) {
       MIDIClientDispose(implData->client); // Closes the ports as well
    }
+
+   *implData = {};
 }
 
-void Kontroller::Communicator::initializeMessage() {
+bool Kontroller::Communicator::initializeMessage() {
    implData->lastPacket = MIDIPacketListInit(&implData->list);
-   KONTROLLER_ASSERT(implData->lastPacket);
+   return implData->lastPacket != nullptr;
 }
 
-void Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
+bool Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
    implData->lastPacket = MIDIPacketListAdd(&implData->list, implData->padding.size(), implData->lastPacket,
                                             0, numBytes, data);
+   return implData->lastPacket != nullptr;
 }
 
-void Kontroller::Communicator::finalizeMessage() {
+bool Kontroller::Communicator::finalizeMessage() {
    OSStatus sendResult = MIDISend(implData->outputPort, implData->destination, &implData->list);
-   KONTROLLER_ASSERT(sendResult == noErr);
+   return sendResult != noErr;
 }

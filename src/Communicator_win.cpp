@@ -5,8 +5,6 @@
 
 #include <string>
 
-#define KONTROLLER_ASSERT_RESULT(x) KONTROLLER_ASSERT((x) == MMSYSERR_NOERROR)
-
 namespace {
 
 std::array<uint8_t, 3> decode(DWORD_PTR value) {
@@ -35,7 +33,7 @@ struct DeviceIDs {
    unsigned int outID { kInvalidID };
 };
 
-DeviceIDs findIDs() {
+DeviceIDs findIDs(const char* deviceName) {
    DeviceIDs ids;
 
    MIDIINCAPS inCapabilities;
@@ -45,7 +43,7 @@ DeviceIDs findIDs() {
          continue;
       }
 
-      if (std::string(inCapabilities.szPname) != "nanoKONTROL2") {
+      if (std::string(inCapabilities.szPname) != deviceName) {
          continue;
       }
 
@@ -60,7 +58,7 @@ DeviceIDs findIDs() {
          continue;
       }
 
-      if (std::string(outCapabilities.szPname) != "nanoKONTROL2") {
+      if (std::string(outCapabilities.szPname) != deviceName) {
          continue;
       }
 
@@ -80,57 +78,99 @@ struct Kontroller::Communicator::ImplData {
 
 Kontroller::Communicator::Communicator(Kontroller* kontroller)
    : implData(new ImplData), kontroller(kontroller) {
-   DeviceIDs deviceIDs = findIDs();
-   KONTROLLER_ASSERT(deviceIDs.inID != DeviceIDs::kInvalidID && deviceIDs.outID != DeviceIDs::kInvalidID);
-
-   MMRESULT inOpenResult = midiInOpen(&implData->inHandle, deviceIDs.inID,
-                                      reinterpret_cast<DWORD_PTR>(midiInputCallback),
-                                      reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
-   KONTROLLER_ASSERT_RESULT(inOpenResult);
-
-   MMRESULT outOpenResult = midiOutOpen(&implData->outHandle, deviceIDs.outID, 0,
-                                        reinterpret_cast<DWORD_PTR>(this), CALLBACK_NULL);
-   KONTROLLER_ASSERT_RESULT(outOpenResult);
-
-   MMRESULT inStartResult = midiInStart(implData->inHandle);
-   KONTROLLER_ASSERT_RESULT(inStartResult);
 }
 
 Kontroller::Communicator::~Communicator() {
-   if (implData->inHandle) {
-      MMRESULT inStopResult = midiInStop(implData->inHandle);
-      KONTROLLER_ASSERT_RESULT(inStopResult);
+   disconnect();
+}
 
-      MMRESULT inCloseResult = midiInClose(implData->inHandle);
-      KONTROLLER_ASSERT_RESULT(inCloseResult);
+bool Kontroller::Communicator::isConnected() const {
+   return implData->inHandle && implData->outHandle;
+}
+
+bool Kontroller::Communicator::connect() {
+   if (isConnected()) {
+      return true;
+   }
+
+   bool success = false;
+   do {
+      DeviceIDs deviceIDs = findIDs(Kontroller::kDeviceName);
+      if (deviceIDs.inID == DeviceIDs::kInvalidID || deviceIDs.outID == DeviceIDs::kInvalidID) {
+         break;
+      }
+
+      MMRESULT inOpenResult = midiInOpen(&implData->inHandle, deviceIDs.inID,
+                                         reinterpret_cast<DWORD_PTR>(midiInputCallback),
+                                         reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
+      if (inOpenResult != MMSYSERR_NOERROR) {
+         break;
+      }
+
+      MMRESULT outOpenResult = midiOutOpen(&implData->outHandle, deviceIDs.outID, 0,
+                                           reinterpret_cast<DWORD_PTR>(this), CALLBACK_NULL);
+      if (outOpenResult != MMSYSERR_NOERROR) {
+         break;
+      }
+
+      MMRESULT inStartResult = midiInStart(implData->inHandle);
+      if (inStartResult != MMSYSERR_NOERROR) {
+         break;
+      }
+
+      success = true;
+   } while(false);
+
+   if (!success) {
+      disconnect();
+   }
+
+   return success;
+}
+
+void Kontroller::Communicator::disconnect() {
+   if (implData->inHandle) {
+      midiInStop(implData->inHandle);
+      midiInClose(implData->inHandle);
    }
 
    if (implData->outHandle) {
-      MMRESULT outCloseResult = midiOutClose(implData->outHandle);
-      KONTROLLER_ASSERT_RESULT(outCloseResult);
+      midiOutClose(implData->outHandle);
    }
+
+   *implData = {};
 }
 
-void Kontroller::Communicator::initializeMessage() {
+bool Kontroller::Communicator::initializeMessage() {
+   return true;
 }
 
-void Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
+bool Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
    MIDIHDR header { 0 };
    header.lpData = reinterpret_cast<LPSTR>(data);
    header.dwBufferLength = numBytes;
 
    MMRESULT prepareResult = midiOutPrepareHeader(implData->outHandle, &header, sizeof(header));
-   KONTROLLER_ASSERT_RESULT(prepareResult);
+   if (prepareResult != MMSYSERR_NOERROR) {
+      return false;
+   }
 
    MMRESULT messageResult = midiOutLongMsg(implData->outHandle, &header, sizeof(header));
-   KONTROLLER_ASSERT_RESULT(messageResult);
+   if (messageResult != MMSYSERR_NOERROR) {
+      return false;
+   }
 
    MMRESULT unprepareResult = MIDIERR_STILLPLAYING;
    while (unprepareResult == MIDIERR_STILLPLAYING) {
       unprepareResult = midiOutUnprepareHeader(implData->outHandle, &header, sizeof(header));
    }
-   KONTROLLER_ASSERT_RESULT(unprepareResult);
+   if (unprepareResult != MMSYSERR_NOERROR) {
+      return false;
+   }
+
+   return true;
 }
 
-void Kontroller::Communicator::finalizeMessage() {
+bool Kontroller::Communicator::finalizeMessage() {
+   return true;
 }

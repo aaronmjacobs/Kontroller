@@ -1,12 +1,14 @@
 #include "Kontroller/Kontroller.h"
 
 #include <cmath>
+#include <cstdio>
 #include <map>
 #include <thread>
 
 namespace {
 
 const int kSleepTime = 10;
+const int kRetrySleepTime = 1;
 
 const std::array<Kontroller::LED, 24> smrLEDs {{
    Kontroller::LED::kCol1S, Kontroller::LED::kCol1M, Kontroller::LED::kCol1R,
@@ -136,6 +138,20 @@ void clearLEDs(Kontroller *kontroller) {
 
 int main(int argc, char *argv[]) {
    Kontroller kontroller;
+
+   bool connected = kontroller.connect();
+   const int kNumRetries = 10;
+   for (int i = 0; i < kNumRetries && !connected; ++i) {
+      std::printf("nanoKONTROL2 not found, trying again in %d seconds\n", kRetrySleepTime);
+      std::this_thread::sleep_for(std::chrono::seconds(kRetrySleepTime));
+      connected = kontroller.connect();
+   }
+   if (!connected) {
+      return 0;
+   }
+
+   std::printf("Connected!\n");
+
    Kontroller::State state = kontroller.getState();
    int displayFuncIndex = 0;
 
@@ -143,6 +159,11 @@ int main(int argc, char *argv[]) {
    kontroller.enableLEDControl(controlEnabled);
 
    while (!state.stop) {
+      // Check if the device was unplugged while the program was running
+      if (!kontroller.isConnected()) {
+         kontroller.connect();
+      }
+
       if (state.cycle) {
          controlEnabled = !controlEnabled;
 

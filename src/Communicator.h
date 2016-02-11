@@ -10,21 +10,27 @@ private:
    std::unique_ptr<ImplData> implData;
    Kontroller* kontroller;
 
-   void appendToMessage(uint8_t* data, size_t numBytes);
+   bool appendToMessage(uint8_t* data, size_t numBytes);
 
 public:
    Communicator(Kontroller* kontroller);
 
    ~Communicator();
 
-   void initializeMessage();
+   bool isConnected() const;
+
+   bool connect();
+
+   void disconnect();
+
+   bool initializeMessage();
 
    template<size_t numBytes>
-   void appendToMessage(std::array<uint8_t, numBytes> data) {
-      appendToMessage(data.data(), data.size());
+   bool appendToMessage(std::array<uint8_t, numBytes> data) {
+      return appendToMessage(data.data(), data.size());
    }
 
-   void finalizeMessage();
+   bool finalizeMessage();
 
    void onMessageReceived(uint8_t id, uint8_t value) {
       kontroller->update(id, value);

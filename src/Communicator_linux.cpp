@@ -9,13 +9,28 @@ Kontroller::Communicator::Communicator(Kontroller* kontroller)
 }
 
 Kontroller::Communicator::~Communicator() {
+   disconnect();
 }
 
-void Kontroller::Communicator::initializeMessage() {
+bool Kontroller::Communicator::isConnected() const {
+   return false;
 }
 
-void Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
+bool Kontroller::Communicator::connect() {
+   return false;
 }
 
-void Kontroller::Communicator::finalizeMessage() {
+void Kontroller::Communicator::disconnect() {
+}
+
+bool Kontroller::Communicator::initializeMessage() {
+   return false;
+}
+
+bool Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
+   return false;
+}
+
+bool Kontroller::Communicator::finalizeMessage() {
+   return false;
 }

@@ -132,7 +132,7 @@ ControlID idForLED(Kontroller::LED led) {
       case Kontroller::LED::kCol8S: return kCol8S;
       case Kontroller::LED::kCol8M: return kCol8M;
       case Kontroller::LED::kCol8R: return kCol8R;
-      default: KONTROLLER_ASSERT(false); return kTrackLeft;
+      default: return kTrackLeft;
    }
 }
 
@@ -201,6 +201,9 @@ bool* getBoolVal(Kontroller::State &state, uint8_t id) {
 
 } // namespace
 
+// static
+const char* const Kontroller::kDeviceName = "nanoKONTROL2";
+
 Kontroller::Kontroller()
    : communicator(new Communicator(this)) {
 }
@@ -208,6 +211,18 @@ Kontroller::Kontroller()
 // This must be defined here so that the default deleter can be used for Kontroller::Communicator (which is an
 // incomplete type in Kontroller.h)
 Kontroller::~Kontroller() {
+}
+
+bool Kontroller::isConnected() const {
+   return communicator->isConnected();
+}
+
+bool Kontroller::connect() {
+   return communicator->connect();
+}
+
+void Kontroller::disconnect() {
+   communicator->disconnect();
 }
 
 void Kontroller::update(uint8_t id, uint8_t value) {
@@ -218,9 +233,9 @@ void Kontroller::update(uint8_t id, uint8_t value) {
       *floatVal = value / 127.0f;
    } else {
       bool *boolVal = getBoolVal(next, id);
-      KONTROLLER_ASSERT(boolVal); // If it isn't a dial or slider, it should be a button
-
-      *boolVal = value != 0;
+      if (boolVal) { // If it isn't a dial or slider, it should be a button
+         *boolVal = value != 0;
+      }
    }
 }
 
@@ -254,37 +269,39 @@ void Kontroller::poll() {
    current = next;
 }
 
-void Kontroller::enableLEDControl(bool enable) {
-   communicator->initializeMessage();
+bool Kontroller::enableLEDControl(bool enable) {
+   bool success = communicator->initializeMessage();
 
-   communicator->appendToMessage(kStartSysex);
-   communicator->appendToMessage(kSecondSysex);
-   communicator->appendToMessage(kStartSysex);
+   success = success && communicator->appendToMessage(kStartSysex);
+   success = success && communicator->appendToMessage(kSecondSysex);
 
+   success = success && communicator->appendToMessage(kStartSysex);
    if (enable) {
       constexpr size_t size = kMainSysex.size();
       std::array<uint8_t, size> enableSysex(kMainSysex);
       enableSysex[kLEDModeOffset] = 0x01;
-      communicator->appendToMessage(enableSysex);
+      success = success && communicator->appendToMessage(enableSysex);
    } else {
-      communicator->appendToMessage(kMainSysex);
+      success = success && communicator->appendToMessage(kMainSysex);
    }
 
-   communicator->appendToMessage(kStartSysex);
-   communicator->appendToMessage(kEndSysex);
+   success = success && communicator->appendToMessage(kStartSysex);
+   success = success && communicator->appendToMessage(kEndSysex);
 
-   communicator->finalizeMessage();
+   success = success && communicator->finalizeMessage();
+
+   return success;
 }
 
-void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
+bool Kontroller::setLEDOn(Kontroller::LED led, bool on) {
    std::array<uint8_t, 3> sendData;
    sendData[0] = 0xB0;
    sendData[1] = idForLED(led);
    sendData[2] = on ? 0x7F : 0x00;
 
-   communicator->initializeMessage();
+   bool success = communicator->initializeMessage();
+   success = success && communicator->appendToMessage(sendData);
+   success = success && communicator->finalizeMessage();
 
-   communicator->appendToMessage(sendData);
-
-   communicator->finalizeMessage();
+   return success;
 }

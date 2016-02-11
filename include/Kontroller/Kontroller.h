@@ -6,11 +6,6 @@
 #include <memory>
 #include <mutex>
 
-#if !defined(KONTROLLER_ASSERT)
-#  include <cassert>
-#  define KONTROLLER_ASSERT assert
-#endif
-
 class Kontroller {
 public:
    enum class LED {
@@ -78,6 +73,8 @@ public:
    friend class Communicator;
 
 private:
+   static const char* const kDeviceName;
+
    State current {};
    State currentNewButtons {};
    State next {};
@@ -91,13 +88,19 @@ public:
 
    ~Kontroller();
 
+   bool isConnected() const;
+
+   bool connect();
+
+   void disconnect();
+
    const State& getState(bool onlyNewButtons = false) const;
 
    void poll();
 
-   void enableLEDControl(bool enable);
+   bool enableLEDControl(bool enable);
 
-   void setLEDOn(LED led, bool on);
+   bool setLEDOn(LED led, bool on);
 };
 
 #endif
