@@ -5,7 +5,33 @@
 
 #include <string>
 
+struct Kontroller::Communicator::ImplData {
+   MIDIClientRef client { 0 };
+   MIDIPortRef inputPort { 0 };
+   MIDIPortRef outputPort { 0 };
+   MIDIEndpointRef destination { 0 };
+
+   union {
+      MIDIPacketList list;
+      std::array<uint8_t, 512> padding; // Ensure the list has enough space
+   };
+   MIDIPacket* lastPacket { nullptr };
+};
+
 namespace {
+
+// Called on the main thread
+void midiNotifyCallback(const MIDINotification *message, void *refCon) {
+   if (message->messageID == kMIDIMsgObjectRemoved) {
+      const MIDIObjectAddRemoveNotification* notification =
+         reinterpret_cast<const MIDIObjectAddRemoveNotification*>(message);
+      Kontroller::Communicator* communicator = reinterpret_cast<Kontroller::Communicator*>(refCon);
+
+      if (notification->child == communicator->getImplData().destination) {
+         communicator->onConnectionLost();
+      }
+   }
+}
 
 // Called on a separate thread
 void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon) {
@@ -59,33 +85,21 @@ Endpoints findEndpoints(const char* deviceName) {
          continue;
       }
 
-      endpoints.source = MIDIEntityGetSource(entity, 0);
-      endpoints.destination = MIDIEntityGetDestination(entity, 0);
-
       SInt32 offline = 0;
       MIDIObjectGetIntegerProperty(device, kMIDIPropertyOffline, &offline);
-      if (!offline) {
-         break; // Take the first online device (but fall back to an offline one)
+      if (offline) {
+         continue;
       }
+
+      endpoints.source = MIDIEntityGetSource(entity, 0);
+      endpoints.destination = MIDIEntityGetDestination(entity, 0);
+      break;
    }
 
    return endpoints;
 }
 
 } // namespace
-
-struct Kontroller::Communicator::ImplData {
-   MIDIClientRef client { 0 };
-   MIDIPortRef inputPort { 0 };
-   MIDIPortRef outputPort { 0 };
-   MIDIEndpointRef destination { 0 };
-
-   union {
-      MIDIPacketList list;
-      std::array<uint8_t, 512> padding; // Ensure the list has enough space
-   };
-   MIDIPacket* lastPacket { nullptr };
-};
 
 Kontroller::Communicator::Communicator(Kontroller* kontroller)
    : implData(new ImplData), kontroller(kontroller) {
@@ -112,7 +126,7 @@ bool Kontroller::Communicator::connect() {
       }
       implData->destination = endpoints.destination;
 
-      OSStatus clientResult = MIDIClientCreate(CFSTR("Kontroller client"), nullptr, nullptr, &implData->client);
+      OSStatus clientResult = MIDIClientCreate(CFSTR("Kontroller client"), midiNotifyCallback, this, &implData->client);
       if (clientResult != noErr) {
          break;
       }
@@ -150,6 +164,14 @@ void Kontroller::Communicator::disconnect() {
    }
 
    *implData = {};
+}
+
+void Kontroller::Communicator::poll() {
+   CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true);
+
+   // We will only be notified of a lost connection when the main loop is run (that is the only time the notify callback
+   // is executed), so we only need to check for lost connections here
+   checkForLostConnection();
 }
 
 bool Kontroller::Communicator::initializeMessage() {

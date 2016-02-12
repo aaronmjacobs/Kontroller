@@ -70,7 +70,6 @@ public:
    };
 
    class Communicator;
-   friend class Communicator;
 
 private:
    static const char* const kDeviceName;

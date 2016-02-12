@@ -246,6 +246,8 @@ const Kontroller::State& Kontroller::getState(bool onlyNewButtons) const {
 #define KONTROLLER_SET_ONLY_NEW(name) currentNewButtons.name = next.name && !current.name
 
 void Kontroller::poll() {
+   communicator->poll();
+
    std::lock_guard<std::mutex> lock(mutex);
 
    currentNewButtons = next;

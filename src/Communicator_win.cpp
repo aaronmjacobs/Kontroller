@@ -15,15 +15,17 @@ std::array<uint8_t, 3> decode(DWORD_PTR value) {
    };
 }
 
-// Called on a separate thread
+// Potentially called on a separate thread
 void CALLBACK midiInputCallback(HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance,
                                 DWORD_PTR dwParam1, DWORD_PTR dwParam2) {
-   if (wMsg != MIM_DATA && wMsg != MIM_MOREDATA) {
-      return;
-   }
+   Kontroller::Communicator* communicator = reinterpret_cast<Kontroller::Communicator*>(dwInstance);
 
-   std::array<uint8_t, 3> values(decode(dwParam1));
-   reinterpret_cast<Kontroller::Communicator*>(dwInstance)->onMessageReceived(values[1], values[2]);
+   if (wMsg == MIM_DATA || wMsg == MIM_MOREDATA) {
+      std::array<uint8_t, 3> values(decode(dwParam1));
+      communicator->onMessageReceived(values[1], values[2]);
+   } else if (wMsg == MIM_CLOSE) {
+      communicator->onConnectionLost();
+   }
 }
 
 struct DeviceIDs {
@@ -119,7 +121,7 @@ bool Kontroller::Communicator::connect() {
       }
 
       success = true;
-   } while(false);
+   } while (false);
 
    if (!success) {
       disconnect();
@@ -141,34 +143,53 @@ void Kontroller::Communicator::disconnect() {
    *implData = {};
 }
 
+void Kontroller::Communicator::poll() {
+   // Attempt to use the device, so that Windows will notify us if it is gone
+   MIDIHDR header { 0 };
+   midiOutPrepareHeader(implData->outHandle, &header, sizeof(header));
+
+   // We can be notified about a lost connection any time a midi api call is made, so we'll check here to keep things up
+   // to date
+   checkForLostConnection();
+}
+
 bool Kontroller::Communicator::initializeMessage() {
    return true;
 }
 
 bool Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
-   MIDIHDR header { 0 };
-   header.lpData = reinterpret_cast<LPSTR>(data);
-   header.dwBufferLength = numBytes;
+   bool success = false;
+   do {
+      MIDIHDR header { 0 };
+      header.lpData = reinterpret_cast<LPSTR>(data);
+      header.dwBufferLength = numBytes;
 
-   MMRESULT prepareResult = midiOutPrepareHeader(implData->outHandle, &header, sizeof(header));
-   if (prepareResult != MMSYSERR_NOERROR) {
-      return false;
-   }
+      MMRESULT prepareResult = midiOutPrepareHeader(implData->outHandle, &header, sizeof(header));
+      if (prepareResult != MMSYSERR_NOERROR) {
+         break;
+      }
 
-   MMRESULT messageResult = midiOutLongMsg(implData->outHandle, &header, sizeof(header));
-   if (messageResult != MMSYSERR_NOERROR) {
-      return false;
-   }
+      MMRESULT messageResult = midiOutLongMsg(implData->outHandle, &header, sizeof(header));
+      if (messageResult != MMSYSERR_NOERROR) {
+         break;
+      }
 
-   MMRESULT unprepareResult = MIDIERR_STILLPLAYING;
-   while (unprepareResult == MIDIERR_STILLPLAYING) {
-      unprepareResult = midiOutUnprepareHeader(implData->outHandle, &header, sizeof(header));
-   }
-   if (unprepareResult != MMSYSERR_NOERROR) {
-      return false;
-   }
+      MMRESULT unprepareResult = MIDIERR_STILLPLAYING;
+      while (unprepareResult == MIDIERR_STILLPLAYING) {
+         unprepareResult = midiOutUnprepareHeader(implData->outHandle, &header, sizeof(header));
+      }
+      if (unprepareResult != MMSYSERR_NOERROR) {
+         break;
+      }
 
-   return true;
+      success = true;
+   } while (false);
+
+   // We can be notified about a lost connection any time a midi api call is made, so we'll check here to keep things up
+   // to date
+   checkForLostConnection();
+
+   return success;
 }
 
 bool Kontroller::Communicator::finalizeMessage() {
