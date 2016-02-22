@@ -187,5 +187,5 @@ bool Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
 
 bool Kontroller::Communicator::finalizeMessage() {
    OSStatus sendResult = MIDISend(implData->outputPort, implData->destination, &implData->list);
-   return sendResult != noErr;
+   return sendResult == noErr;
 }
