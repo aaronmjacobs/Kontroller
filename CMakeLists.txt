@@ -10,11 +10,15 @@ endif ()
 # Source files
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
+set(QUEUE_DIR "${LIB_DIR}/readerwriterqueue")
 set(SOURCES)
 list(APPEND SOURCES
    "${SRC_DIR}/Kontroller.cpp"
    "${SRC_DIR}/Communicator.h"
    "${INC_DIR}/Kontroller/Kontroller.h"
+   "${QUEUE_DIR}/atomicops.h"
+   "${QUEUE_DIR}/readerwriterqueue.h"
 )
 if (APPLE)
    list(APPEND SOURCES
@@ -33,10 +37,13 @@ endif ()
 # Library definition and features
 add_library(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME}
-   PUBLIC "${INC_DIR}"
+   PUBLIC "${INC_DIR}" "${QUEUE_DIR}"
    PRIVATE "${SRC_DIR}"
 )
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_strong_enums cxx_nullptr)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+   CXX_STANDARD 14
+   CXX_STANDARD_REQUIRED ON
+)
 
 # Platform-specific dependencies
 if (APPLE)
