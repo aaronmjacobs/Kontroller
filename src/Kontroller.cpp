@@ -100,6 +100,9 @@ const std::array<uint8_t, 11> kEndSysex {{
 
 const size_t kLEDModeOffset = 16;
 
+const std::chrono::milliseconds kConnectSleepTime = std::chrono::milliseconds(500);
+const std::chrono::milliseconds kMaxWaitTime = std::chrono::milliseconds(500);
+
 ControlID idForLED(Kontroller::LED led) {
    switch (led) {
       case Kontroller::LED::kCycle: return kCycle;
@@ -205,73 +208,90 @@ bool* getBoolVal(Kontroller::State &state, uint8_t id) {
 const char* const Kontroller::kDeviceName = "nanoKONTROL2";
 
 Kontroller::Kontroller()
-   : communicator(new Communicator(this)) {
+   : shuttingDown(false), communicator(std::make_unique<Communicator>(this)), thread([this]{ threadRun(); }) {
 }
 
 // This must be defined here so that the default deleter can be used for Kontroller::Communicator (which is an
 // incomplete type in Kontroller.h)
 Kontroller::~Kontroller() {
-}
-
-bool Kontroller::isConnected() const {
-   return communicator->isConnected();
-}
-
-bool Kontroller::connect() {
-   return communicator->connect();
-}
-
-void Kontroller::disconnect() {
-   communicator->disconnect();
+   shuttingDown = true;
+   cv.notify_all();
+   thread.join();
 }
 
 void Kontroller::update(uint8_t id, uint8_t value) {
-   std::lock_guard<std::mutex> lock(mutex);
+   MidiMessage message;
+   message.id = id;
+   message.value = value;
 
-   float *floatVal = getFloatVal(next, id);
-   if (floatVal) {
-      *floatVal = value / 127.0f;
-   } else {
-      bool *boolVal = getBoolVal(next, id);
-      if (boolVal) { // If it isn't a dial or slider, it should be a button
-         *boolVal = value != 0;
+   messageQueue.enqueue(message);
+   cv.notify_all();
+}
+
+void Kontroller::threadRun() {
+   std::mutex lifetimeMutex;
+   std::unique_lock<std::mutex> lock(lifetimeMutex);
+
+   bool shouldExit = false;
+   while (!shouldExit) {
+      // Wait until there's something to do
+      cv.wait_for(lock, kMaxWaitTime, [this]{
+         return messageQueue.peek() != nullptr || commandQueue.peek() != nullptr || !communicator->isConnected();
+      });
+
+      // Only update whether we should exit here, so that we make sure to send any final commands before shutting down
+      shouldExit = shuttingDown;
+
+      // Read any pending messages
+      MidiMessage message;
+      while (messageQueue.try_dequeue(message)) {
+         processMessage(message);
+      }
+
+      // Poll the communicator (to check for disconnection)
+      communicator->poll();
+
+      // Check if we're still connected
+      bool isConnected = communicator->isConnected();
+      if (!isConnected && !shuttingDown) {
+         isConnected = communicator->connect();
+      }
+
+      if (isConnected) {
+         // Send any pending commands
+         MidiCommand command;
+         while (commandQueue.try_dequeue(command)) {
+            processCommand(command);
+         }
+      } else if (!shuttingDown) {
+         // Sleep a bit before trying to connect again
+         std::this_thread::sleep_for(kConnectSleepTime);
       }
    }
 }
 
-const Kontroller::State& Kontroller::getState(bool onlyNewButtons) const {
-   return onlyNewButtons ? currentNewButtons : current;
-}
+void Kontroller::processMessage(MidiMessage message) {
+   std::lock_guard<std::mutex> lock(valueMutex);
 
-#define KONTROLLER_SET_ONLY_NEW(name) currentNewButtons.name = next.name && !current.name
-
-void Kontroller::poll() {
-   communicator->poll();
-
-   std::lock_guard<std::mutex> lock(mutex);
-
-   currentNewButtons = next;
-   KONTROLLER_SET_ONLY_NEW(trackLeft);
-   KONTROLLER_SET_ONLY_NEW(trackRight);
-   KONTROLLER_SET_ONLY_NEW(cycle);
-   KONTROLLER_SET_ONLY_NEW(markerSet);
-   KONTROLLER_SET_ONLY_NEW(markerLeft);
-   KONTROLLER_SET_ONLY_NEW(markerRight);
-   KONTROLLER_SET_ONLY_NEW(rewind);
-   KONTROLLER_SET_ONLY_NEW(fastForward);
-   KONTROLLER_SET_ONLY_NEW(stop);
-   KONTROLLER_SET_ONLY_NEW(play);
-   KONTROLLER_SET_ONLY_NEW(record);
-   for (size_t i = 0; i < next.columns.size(); ++i) {
-      KONTROLLER_SET_ONLY_NEW(columns[i].s);
-      KONTROLLER_SET_ONLY_NEW(columns[i].m);
-      KONTROLLER_SET_ONLY_NEW(columns[i].r);
+   if (float* floatVal = getFloatVal(state, message.id)) {
+      *floatVal = message.value / 127.0f;
+   } else if (bool *boolVal = getBoolVal(state, message.id)) {
+      *boolVal = message.value != 0;
    }
-
-   current = next;
 }
 
-bool Kontroller::enableLEDControl(bool enable) {
+void Kontroller::processCommand(MidiCommand command) {
+   switch (command.type) {
+      case MidiCommand::Type::kControl:
+         processControlCommand(command.value);
+         break;
+      case MidiCommand::Type::kLED:
+         processLEDCommand(command.led, command.value);
+         break;
+   }
+}
+
+void Kontroller::processControlCommand(bool enable) {
    bool success = communicator->initializeMessage();
 
    success = success && communicator->appendToMessage(kStartSysex);
@@ -292,18 +312,43 @@ bool Kontroller::enableLEDControl(bool enable) {
 
    success = success && communicator->finalizeMessage();
 
-   return success;
+   // TODO Figure out how to handle failure (error state? callback?)
+   //return success;
 }
 
-bool Kontroller::setLEDOn(Kontroller::LED led, bool on) {
+void Kontroller::processLEDCommand(LED led, bool enable) {
    std::array<uint8_t, 3> sendData;
    sendData[0] = 0xB0;
    sendData[1] = idForLED(led);
-   sendData[2] = on ? 0x7F : 0x00;
+   sendData[2] = enable ? 0x7F : 0x00;
 
    bool success = communicator->initializeMessage();
    success = success && communicator->appendToMessage(sendData);
    success = success && communicator->finalizeMessage();
 
-   return success;
+   // TODO Figure out how to handle failure (error state? callback?)
+   //return success;
+}
+
+bool Kontroller::isConnected() const {
+   return communicator->isConnected();
+}
+
+void Kontroller::enableLEDControl(bool enable) {
+   MidiCommand command{};
+   command.type = MidiCommand::Type::kControl;
+   command.value = enable;
+
+   commandQueue.enqueue(command);
+   cv.notify_all();
+}
+
+void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
+   MidiCommand command{};
+   command.type = MidiCommand::Type::kLED;
+   command.led = led;
+   command.value = on;
+
+   commandQueue.enqueue(command);
+   cv.notify_all();
 }

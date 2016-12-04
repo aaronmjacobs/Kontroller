@@ -8,7 +8,6 @@
 namespace {
 
 const int kSleepTime = 10;
-const int kRetrySleepTime = 1;
 
 const std::array<Kontroller::LED, 24> smrLEDs {{
    Kontroller::LED::kCol1S, Kontroller::LED::kCol1M, Kontroller::LED::kCol1R,
@@ -122,11 +121,11 @@ void followSliders(Kontroller* kontroller) {
 
 typedef void (*DisplayFunc)(Kontroller*);
 
-std::array<DisplayFunc, 3> displayFunctions {
+std::array<DisplayFunc, 3> displayFunctions {{
    doTheWave,
    explode,
    followSliders
-};
+}};
 
 void clearLEDs(Kontroller *kontroller) {
    for (Kontroller::LED led : smrLEDs) {
@@ -139,53 +138,43 @@ void clearLEDs(Kontroller *kontroller) {
 int main(int argc, char *argv[]) {
    Kontroller kontroller;
 
-   bool connected = kontroller.connect();
-   const int kNumRetries = 10;
-   for (int i = 0; i < kNumRetries && !connected; ++i) {
-      std::printf("nanoKONTROL2 not found, trying again in %d seconds\n", kRetrySleepTime);
-      std::this_thread::sleep_for(std::chrono::seconds(kRetrySleepTime));
-      connected = kontroller.connect();
-   }
-   if (!connected) {
-      return 0;
-   }
-
-   std::printf("Connected!\n");
-
    Kontroller::State state = kontroller.getState();
+   Kontroller::State current = state;
+   Kontroller::State previous = state;
    int displayFuncIndex = 0;
 
    bool controlEnabled = false;
    kontroller.enableLEDControl(controlEnabled);
 
    while (!state.stop) {
-      // Check if the device was unplugged while the program was running
-      if (!kontroller.isConnected()) {
-         kontroller.connect();
-      }
+      if (kontroller.isConnected()) {
+         if (state.cycle) {
+            controlEnabled = !controlEnabled;
 
-      if (state.cycle) {
-         controlEnabled = !controlEnabled;
+            if (!controlEnabled) {
+               clearLEDs(&kontroller);
+            }
 
-         if (!controlEnabled) {
-            clearLEDs(&kontroller);
+            kontroller.enableLEDControl(controlEnabled);
          }
 
-         kontroller.enableLEDControl(controlEnabled);
-      }
+         if (state.trackRight) {
+            displayFuncIndex = (displayFuncIndex + 1) % displayFunctions.size();
+         }
+         if (state.trackLeft) {
+            displayFuncIndex = displayFuncIndex == 0 ? displayFunctions.size() - 1 : displayFuncIndex - 1;
+         }
 
-      if (state.trackRight) {
-         displayFuncIndex = (displayFuncIndex + 1) % displayFunctions.size();
+         if (controlEnabled) {
+            displayFunctions[displayFuncIndex](&kontroller);
+         }
       }
-      if (state.trackLeft) {
-         displayFuncIndex = displayFuncIndex == 0 ? displayFunctions.size() - 1 : displayFuncIndex - 1;
-      }
-
-      displayFunctions[displayFuncIndex](&kontroller);
 
       std::this_thread::sleep_for(std::chrono::milliseconds(kSleepTime));
-      kontroller.poll();
-      state = kontroller.getState(true);
+
+      previous = current;
+      current = kontroller.getState();
+      state = Kontroller::onlyNewButtons(previous, current);
    }
 
    clearLEDs(&kontroller);
