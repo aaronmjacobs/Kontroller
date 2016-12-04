@@ -162,7 +162,7 @@ bool Kontroller::Communicator::appendToMessage(uint8_t* data, size_t numBytes) {
    do {
       MIDIHDR header { 0 };
       header.lpData = reinterpret_cast<LPSTR>(data);
-      header.dwBufferLength = numBytes;
+      header.dwBufferLength = static_cast<DWORD>(numBytes);
 
       MMRESULT prepareResult = midiOutPrepareHeader(implData->outHandle, &header, sizeof(header));
       if (prepareResult != MMSYSERR_NOERROR) {
