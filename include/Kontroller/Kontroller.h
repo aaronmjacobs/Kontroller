@@ -26,54 +26,54 @@ public:
       kStop,
       kPlay,
       kRecord,
-      kCol1Solo,
-      kCol1Mute,
-      kCol1Record,
-      kCol2Solo,
-      kCol2Mute,
-      kCol2Record,
-      kCol3Solo,
-      kCol3Mute,
-      kCol3Record,
-      kCol4Solo,
-      kCol4Mute,
-      kCol4Record,
-      kCol5Solo,
-      kCol5Mute,
-      kCol5Record,
-      kCol6Solo,
-      kCol6Mute,
-      kCol6Record,
-      kCol7Solo,
-      kCol7Mute,
-      kCol7Record,
-      kCol8Solo,
-      kCol8Mute,
-      kCol8Record
+      kGroup1Solo,
+      kGroup1Mute,
+      kGroup1Record,
+      kGroup2Solo,
+      kGroup2Mute,
+      kGroup2Record,
+      kGroup3Solo,
+      kGroup3Mute,
+      kGroup3Record,
+      kGroup4Solo,
+      kGroup4Mute,
+      kGroup4Record,
+      kGroup5Solo,
+      kGroup5Mute,
+      kGroup5Record,
+      kGroup6Solo,
+      kGroup6Mute,
+      kGroup6Record,
+      kGroup7Solo,
+      kGroup7Mute,
+      kGroup7Record,
+      kGroup8Solo,
+      kGroup8Mute,
+      kGroup8Record
    };
 
    enum class Dial {
       kNone,
-      kCol1,
-      kCol2,
-      kCol3,
-      kCol4,
-      kCol5,
-      kCol6,
-      kCol7,
-      kCol8
+      kGroup1,
+      kGroup2,
+      kGroup3,
+      kGroup4,
+      kGroup5,
+      kGroup6,
+      kGroup7,
+      kGroup8
    };
 
    enum class Slider {
       kNone,
-      kCol1,
-      kCol2,
-      kCol3,
-      kCol4,
-      kCol5,
-      kCol6,
-      kCol7,
-      kCol8
+      kGroup1,
+      kGroup2,
+      kGroup3,
+      kGroup4,
+      kGroup5,
+      kGroup6,
+      kGroup7,
+      kGroup8
    };
 
    enum class LED {
@@ -83,33 +83,33 @@ public:
       kStop,
       kPlay,
       kRecord,
-      kCol1Solo,
-      kCol1Mute,
-      kCol1Record,
-      kCol2Solo,
-      kCol2Mute,
-      kCol2Record,
-      kCol3Solo,
-      kCol3Mute,
-      kCol3Record,
-      kCol4Solo,
-      kCol4Mute,
-      kCol4Record,
-      kCol5Solo,
-      kCol5Mute,
-      kCol5Record,
-      kCol6Solo,
-      kCol6Mute,
-      kCol6Record,
-      kCol7Solo,
-      kCol7Mute,
-      kCol7Record,
-      kCol8Solo,
-      kCol8Mute,
-      kCol8Record
+      kGroup1Solo,
+      kGroup1Mute,
+      kGroup1Record,
+      kGroup2Solo,
+      kGroup2Mute,
+      kGroup2Record,
+      kGroup3Solo,
+      kGroup3Mute,
+      kGroup3Record,
+      kGroup4Solo,
+      kGroup4Mute,
+      kGroup4Record,
+      kGroup5Solo,
+      kGroup5Mute,
+      kGroup5Record,
+      kGroup6Solo,
+      kGroup6Mute,
+      kGroup6Record,
+      kGroup7Solo,
+      kGroup7Mute,
+      kGroup7Record,
+      kGroup8Solo,
+      kGroup8Mute,
+      kGroup8Record
    };
 
-   struct Column {
+   struct Group {
       float dial;
       float slider;
 
@@ -119,7 +119,7 @@ public:
    };
 
    struct State {
-      std::array<Column, 8> columns;
+      std::array<Group, 8> groups;
 
       bool trackLeft;
       bool trackRight;
@@ -188,10 +188,10 @@ public:
    static State onlyNewButtons(const State& previous, const State& current) {
       State onlyNew = current;
 
-      for (size_t i = 0; i < onlyNew.columns.size(); ++i) {
-         onlyNew.columns[i].solo = current.columns[i].solo && !previous.columns[i].solo;
-         onlyNew.columns[i].mute = current.columns[i].mute && !previous.columns[i].mute;
-         onlyNew.columns[i].record = current.columns[i].record && !previous.columns[i].record;
+      for (size_t i = 0; i < onlyNew.groups.size(); ++i) {
+         onlyNew.groups[i].solo = current.groups[i].solo && !previous.groups[i].solo;
+         onlyNew.groups[i].mute = current.groups[i].mute && !previous.groups[i].mute;
+         onlyNew.groups[i].record = current.groups[i].record && !previous.groups[i].record;
       }
 
       onlyNew.trackLeft = current.trackLeft && !previous.trackLeft;

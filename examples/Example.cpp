@@ -10,14 +10,14 @@ namespace {
 const int kSleepTime = 10;
 
 const std::array<Kontroller::LED, 24> smrLEDs {{
-   Kontroller::LED::kCol1Solo, Kontroller::LED::kCol1Mute, Kontroller::LED::kCol1Record,
-   Kontroller::LED::kCol2Solo, Kontroller::LED::kCol2Mute, Kontroller::LED::kCol2Record,
-   Kontroller::LED::kCol3Solo, Kontroller::LED::kCol3Mute, Kontroller::LED::kCol3Record,
-   Kontroller::LED::kCol4Solo, Kontroller::LED::kCol4Mute, Kontroller::LED::kCol4Record,
-   Kontroller::LED::kCol5Solo, Kontroller::LED::kCol5Mute, Kontroller::LED::kCol5Record,
-   Kontroller::LED::kCol6Solo, Kontroller::LED::kCol6Mute, Kontroller::LED::kCol6Record,
-   Kontroller::LED::kCol7Solo, Kontroller::LED::kCol7Mute, Kontroller::LED::kCol7Record,
-   Kontroller::LED::kCol8Solo, Kontroller::LED::kCol8Mute, Kontroller::LED::kCol8Record,
+   Kontroller::LED::kGroup1Solo, Kontroller::LED::kGroup1Mute, Kontroller::LED::kGroup1Record,
+   Kontroller::LED::kGroup2Solo, Kontroller::LED::kGroup2Mute, Kontroller::LED::kGroup2Record,
+   Kontroller::LED::kGroup3Solo, Kontroller::LED::kGroup3Mute, Kontroller::LED::kGroup3Record,
+   Kontroller::LED::kGroup4Solo, Kontroller::LED::kGroup4Mute, Kontroller::LED::kGroup4Record,
+   Kontroller::LED::kGroup5Solo, Kontroller::LED::kGroup5Mute, Kontroller::LED::kGroup5Record,
+   Kontroller::LED::kGroup6Solo, Kontroller::LED::kGroup6Mute, Kontroller::LED::kGroup6Record,
+   Kontroller::LED::kGroup7Solo, Kontroller::LED::kGroup7Mute, Kontroller::LED::kGroup7Record,
+   Kontroller::LED::kGroup8Solo, Kontroller::LED::kGroup8Mute, Kontroller::LED::kGroup8Record,
 }};
 
 struct Loc {
@@ -70,14 +70,14 @@ void explode(Kontroller* kontroller) {
    static Loc origin { 0.0f, 0.0f };
    if (radius == 0.0f) {
       for (size_t i = 0; i < smrLEDs.size(); ++i) {
-         size_t col = i / 3;
+         size_t group = i / 3;
          bool pressed;
          if (i % 3 == 0) {
-            pressed = state.columns[col].solo;
+            pressed = state.groups[group].solo;
          } else if (i % 3 == 1) {
-            pressed = state.columns[col].mute;
+            pressed = state.groups[group].mute;
          } else {
-            pressed = state.columns[col].record;
+            pressed = state.groups[group].record;
          }
 
          if (pressed) {
@@ -106,8 +106,8 @@ void followSliders(Kontroller* kontroller) {
    Kontroller::State state = kontroller->getState();
 
    for (size_t i = 0; i < smrLEDs.size(); i += 3) {
-      size_t col = i / 3;
-      float val = state.columns[col].slider;
+      size_t group = i / 3;
+      float val = state.groups[group].slider;
 
       bool s = val > 0.75f;
       bool m = val > 0.5f;
