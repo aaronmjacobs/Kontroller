@@ -159,6 +159,7 @@ public:
    void setLEDOn(LED led, bool on);
 
    void setButtonCallback(ButtonCallback callback) {
+      std::lock_guard<std::recursive_mutex> lock(callbackMutex);
       buttonCallback = callback;
    }
 
@@ -167,6 +168,7 @@ public:
    }
 
    void setDialCallback(DialCallback callback) {
+      std::lock_guard<std::recursive_mutex> lock(callbackMutex);
       dialCallback = callback;
    }
 
@@ -175,6 +177,7 @@ public:
    }
 
    void setSliderCallback(SliderCallback callback) {
+      std::lock_guard<std::recursive_mutex> lock(callbackMutex);
       sliderCallback = callback;
    }
 
@@ -233,6 +236,7 @@ private:
    moodycamel::ReaderWriterQueue<MidiMessage> messageQueue;
    moodycamel::ReaderWriterQueue<MidiCommand> commandQueue;
    mutable std::mutex valueMutex;
+   std::recursive_mutex callbackMutex;
    std::condition_variable cv;
    std::unique_ptr<Communicator> communicator;
    std::thread thread;

@@ -369,22 +369,46 @@ void Kontroller::threadRun() {
 }
 
 void Kontroller::processMessage(MidiMessage message) {
-   std::lock_guard<std::mutex> lock(valueMutex);
+   bool isButton = false;
+   bool isDial = false;
+   bool isSlider = false;
 
-   if (bool* buttonVal = getButtonVal(state, message.id)) {
-      *buttonVal = message.value != 0;
-      if (buttonCallback) {
-         buttonCallback(buttonById(message.id), *buttonVal);
+   bool buttonValue = false;
+   float dialValue = 0.0f;
+   float sliderValue = 0.0f;
+
+   {
+      std::lock_guard<std::mutex> lock(valueMutex);
+
+      if (bool* buttonVal = getButtonVal(state, message.id)) {
+         *buttonVal = message.value != 0;
+
+         isButton = true;
+         buttonValue = *buttonVal;
       }
-   } else if (float* dialVal = getDialVal(state, message.id)) {
-      *dialVal = message.value / 127.0f;
-      if (dialCallback) {
-         dialCallback(dialById(message.id), *dialVal);
+      else if (float* dialVal = getDialVal(state, message.id)) {
+         *dialVal = message.value / 127.0f;
+
+         isDial = true;
+         dialValue = *dialVal;
       }
-   } else if (float* sliderVal = getSliderVal(state, message.id)) {
-      *sliderVal = message.value / 127.0f;
-      if (sliderCallback) {
-         sliderCallback(sliderById(message.id), *sliderVal);
+      else if (float* sliderVal = getSliderVal(state, message.id)) {
+         *sliderVal = message.value / 127.0f;
+
+         isSlider = true;
+         sliderValue = *sliderVal;
+      }
+   }
+
+   {
+      std::lock_guard<std::recursive_mutex> lock(callbackMutex);
+
+      if (isButton && buttonCallback) {
+         buttonCallback(buttonById(message.id), buttonValue);
+      } else if (isDial && dialCallback) {
+         dialCallback(dialById(message.id), dialValue);
+      } else if (isSlider && sliderCallback) {
+         sliderCallback(sliderById(message.id), sliderValue);
       }
    }
 }
