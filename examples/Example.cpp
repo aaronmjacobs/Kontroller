@@ -10,14 +10,14 @@ namespace {
 const int kSleepTime = 10;
 
 const std::array<Kontroller::LED, 24> smrLEDs {{
-   Kontroller::LED::kCol1S, Kontroller::LED::kCol1M, Kontroller::LED::kCol1R,
-   Kontroller::LED::kCol2S, Kontroller::LED::kCol2M, Kontroller::LED::kCol2R,
-   Kontroller::LED::kCol3S, Kontroller::LED::kCol3M, Kontroller::LED::kCol3R,
-   Kontroller::LED::kCol4S, Kontroller::LED::kCol4M, Kontroller::LED::kCol4R,
-   Kontroller::LED::kCol5S, Kontroller::LED::kCol5M, Kontroller::LED::kCol5R,
-   Kontroller::LED::kCol6S, Kontroller::LED::kCol6M, Kontroller::LED::kCol6R,
-   Kontroller::LED::kCol7S, Kontroller::LED::kCol7M, Kontroller::LED::kCol7R,
-   Kontroller::LED::kCol8S, Kontroller::LED::kCol8M, Kontroller::LED::kCol8R,
+   Kontroller::LED::kCol1Solo, Kontroller::LED::kCol1Mute, Kontroller::LED::kCol1Record,
+   Kontroller::LED::kCol2Solo, Kontroller::LED::kCol2Mute, Kontroller::LED::kCol2Record,
+   Kontroller::LED::kCol3Solo, Kontroller::LED::kCol3Mute, Kontroller::LED::kCol3Record,
+   Kontroller::LED::kCol4Solo, Kontroller::LED::kCol4Mute, Kontroller::LED::kCol4Record,
+   Kontroller::LED::kCol5Solo, Kontroller::LED::kCol5Mute, Kontroller::LED::kCol5Record,
+   Kontroller::LED::kCol6Solo, Kontroller::LED::kCol6Mute, Kontroller::LED::kCol6Record,
+   Kontroller::LED::kCol7Solo, Kontroller::LED::kCol7Mute, Kontroller::LED::kCol7Record,
+   Kontroller::LED::kCol8Solo, Kontroller::LED::kCol8Mute, Kontroller::LED::kCol8Record,
 }};
 
 struct Loc {

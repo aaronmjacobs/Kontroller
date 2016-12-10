@@ -17,44 +17,44 @@ enum ControlID : uint8_t {
    kRecord = 0x2D,
    kCol1Dial = 0x10,
    kCol1Slider = 0x00,
-   kCol1S = 0x20,
-   kCol1M = 0x30,
-   kCol1R = 0x40,
+   kCol1Solo = 0x20,
+   kCol1Mute = 0x30,
+   kCol1Record = 0x40,
    kCol2Dial = kCol1Dial + 1,
    kCol2Slider = kCol1Slider + 1,
-   kCol2S = kCol1S + 1,
-   kCol2M = kCol1M + 1,
-   kCol2R = kCol1R + 1,
+   kCol2Solo = kCol1Solo + 1,
+   kCol2Mute = kCol1Mute + 1,
+   kCol2Record = kCol1Record + 1,
    kCol3Dial = kCol2Dial + 1,
    kCol3Slider = kCol2Slider + 1,
-   kCol3S = kCol2S + 1,
-   kCol3M = kCol2M + 1,
-   kCol3R = kCol2R + 1,
+   kCol3Solo = kCol2Solo + 1,
+   kCol3Mute = kCol2Mute + 1,
+   kCol3Record = kCol2Record + 1,
    kCol4Dial = kCol3Dial + 1,
    kCol4Slider = kCol3Slider + 1,
-   kCol4S = kCol3S + 1,
-   kCol4M = kCol3M + 1,
-   kCol4R = kCol3R + 1,
+   kCol4Solo = kCol3Solo + 1,
+   kCol4Mute = kCol3Mute + 1,
+   kCol4Record = kCol3Record + 1,
    kCol5Dial = kCol4Dial + 1,
    kCol5Slider = kCol4Slider + 1,
-   kCol5S = kCol4S + 1,
-   kCol5M = kCol4M + 1,
-   kCol5R = kCol4R + 1,
+   kCol5Solo = kCol4Solo + 1,
+   kCol5Mute = kCol4Mute + 1,
+   kCol5Record = kCol4Record + 1,
    kCol6Dial = kCol5Dial + 1,
    kCol6Slider = kCol5Slider + 1,
-   kCol6S = kCol5S + 1,
-   kCol6M = kCol5M + 1,
-   kCol6R = kCol5R + 1,
+   kCol6Solo = kCol5Solo + 1,
+   kCol6Mute = kCol5Mute + 1,
+   kCol6Record = kCol5Record + 1,
    kCol7Dial = kCol6Dial + 1,
    kCol7Slider = kCol6Slider + 1,
-   kCol7S = kCol6S + 1,
-   kCol7M = kCol6M + 1,
-   kCol7R = kCol6R + 1,
+   kCol7Solo = kCol6Solo + 1,
+   kCol7Mute = kCol6Mute + 1,
+   kCol7Record = kCol6Record + 1,
    kCol8Dial = kCol7Dial + 1,
    kCol8Slider = kCol7Slider + 1,
-   kCol8S = kCol7S + 1,
-   kCol8M = kCol7M + 1,
-   kCol8R = kCol7R + 1,
+   kCol8Solo = kCol7Solo + 1,
+   kCol8Mute = kCol7Mute + 1,
+   kCol8Record = kCol7Record + 1,
 };
 
 const std::array<uint8_t, 6> kStartSysex {{
@@ -111,30 +111,30 @@ ControlID idForLED(Kontroller::LED led) {
       case Kontroller::LED::kStop: return kStop;
       case Kontroller::LED::kPlay: return kPlay;
       case Kontroller::LED::kRecord: return kRecord;
-      case Kontroller::LED::kCol1S: return kCol1S;
-      case Kontroller::LED::kCol1M: return kCol1M;
-      case Kontroller::LED::kCol1R: return kCol1R;
-      case Kontroller::LED::kCol2S: return kCol2S;
-      case Kontroller::LED::kCol2M: return kCol2M;
-      case Kontroller::LED::kCol2R: return kCol2R;
-      case Kontroller::LED::kCol3S: return kCol3S;
-      case Kontroller::LED::kCol3M: return kCol3M;
-      case Kontroller::LED::kCol3R: return kCol3R;
-      case Kontroller::LED::kCol4S: return kCol4S;
-      case Kontroller::LED::kCol4M: return kCol4M;
-      case Kontroller::LED::kCol4R: return kCol4R;
-      case Kontroller::LED::kCol5S: return kCol5S;
-      case Kontroller::LED::kCol5M: return kCol5M;
-      case Kontroller::LED::kCol5R: return kCol5R;
-      case Kontroller::LED::kCol6S: return kCol6S;
-      case Kontroller::LED::kCol6M: return kCol6M;
-      case Kontroller::LED::kCol6R: return kCol6R;
-      case Kontroller::LED::kCol7S: return kCol7S;
-      case Kontroller::LED::kCol7M: return kCol7M;
-      case Kontroller::LED::kCol7R: return kCol7R;
-      case Kontroller::LED::kCol8S: return kCol8S;
-      case Kontroller::LED::kCol8M: return kCol8M;
-      case Kontroller::LED::kCol8R: return kCol8R;
+      case Kontroller::LED::kCol1Solo: return kCol1Solo;
+      case Kontroller::LED::kCol1Mute: return kCol1Mute;
+      case Kontroller::LED::kCol1Record: return kCol1Record;
+      case Kontroller::LED::kCol2Solo: return kCol2Solo;
+      case Kontroller::LED::kCol2Mute: return kCol2Mute;
+      case Kontroller::LED::kCol2Record: return kCol2Record;
+      case Kontroller::LED::kCol3Solo: return kCol3Solo;
+      case Kontroller::LED::kCol3Mute: return kCol3Mute;
+      case Kontroller::LED::kCol3Record: return kCol3Record;
+      case Kontroller::LED::kCol4Solo: return kCol4Solo;
+      case Kontroller::LED::kCol4Mute: return kCol4Mute;
+      case Kontroller::LED::kCol4Record: return kCol4Record;
+      case Kontroller::LED::kCol5Solo: return kCol5Solo;
+      case Kontroller::LED::kCol5Mute: return kCol5Mute;
+      case Kontroller::LED::kCol5Record: return kCol5Record;
+      case Kontroller::LED::kCol6Solo: return kCol6Solo;
+      case Kontroller::LED::kCol6Mute: return kCol6Mute;
+      case Kontroller::LED::kCol6Record: return kCol6Record;
+      case Kontroller::LED::kCol7Solo: return kCol7Solo;
+      case Kontroller::LED::kCol7Mute: return kCol7Mute;
+      case Kontroller::LED::kCol7Record: return kCol7Record;
+      case Kontroller::LED::kCol8Solo: return kCol8Solo;
+      case Kontroller::LED::kCol8Mute: return kCol8Mute;
+      case Kontroller::LED::kCol8Record: return kCol8Record;
       default: return kTrackLeft;
    }
 }
@@ -180,30 +180,30 @@ bool* getButtonVal(Kontroller::State &state, uint8_t id) {
       case kStop: return &state.stop;
       case kPlay: return &state.play;
       case kRecord: return &state.record;
-      case kCol1S: return &state.columns[0].s;
-      case kCol1M: return &state.columns[0].m;
-      case kCol1R: return &state.columns[0].r;
-      case kCol2S: return &state.columns[1].s;
-      case kCol2M: return &state.columns[1].m;
-      case kCol2R: return &state.columns[1].r;
-      case kCol3S: return &state.columns[2].s;
-      case kCol3M: return &state.columns[2].m;
-      case kCol3R: return &state.columns[2].r;
-      case kCol4S: return &state.columns[3].s;
-      case kCol4M: return &state.columns[3].m;
-      case kCol4R: return &state.columns[3].r;
-      case kCol5S: return &state.columns[4].s;
-      case kCol5M: return &state.columns[4].m;
-      case kCol5R: return &state.columns[4].r;
-      case kCol6S: return &state.columns[5].s;
-      case kCol6M: return &state.columns[5].m;
-      case kCol6R: return &state.columns[5].r;
-      case kCol7S: return &state.columns[6].s;
-      case kCol7M: return &state.columns[6].m;
-      case kCol7R: return &state.columns[6].r;
-      case kCol8S: return &state.columns[7].s;
-      case kCol8M: return &state.columns[7].m;
-      case kCol8R: return &state.columns[7].r;
+      case kCol1Solo: return &state.columns[0].s;
+      case kCol1Mute: return &state.columns[0].m;
+      case kCol1Record: return &state.columns[0].r;
+      case kCol2Solo: return &state.columns[1].s;
+      case kCol2Mute: return &state.columns[1].m;
+      case kCol2Record: return &state.columns[1].r;
+      case kCol3Solo: return &state.columns[2].s;
+      case kCol3Mute: return &state.columns[2].m;
+      case kCol3Record: return &state.columns[2].r;
+      case kCol4Solo: return &state.columns[3].s;
+      case kCol4Mute: return &state.columns[3].m;
+      case kCol4Record: return &state.columns[3].r;
+      case kCol5Solo: return &state.columns[4].s;
+      case kCol5Mute: return &state.columns[4].m;
+      case kCol5Record: return &state.columns[4].r;
+      case kCol6Solo: return &state.columns[5].s;
+      case kCol6Mute: return &state.columns[5].m;
+      case kCol6Record: return &state.columns[5].r;
+      case kCol7Solo: return &state.columns[6].s;
+      case kCol7Mute: return &state.columns[6].m;
+      case kCol7Record: return &state.columns[6].r;
+      case kCol8Solo: return &state.columns[7].s;
+      case kCol8Mute: return &state.columns[7].m;
+      case kCol8Record: return &state.columns[7].r;
       default: return nullptr;
    }
 }
@@ -221,30 +221,30 @@ Kontroller::Button buttonById(uint8_t id) {
       case kStop: return Kontroller::Button::kStop;
       case kPlay: return Kontroller::Button::kPlay;
       case kRecord: return Kontroller::Button::kRecord;
-      case kCol1S: return Kontroller::Button::kCol1Solo;
-      case kCol1M: return Kontroller::Button::kCol1Mute;
-      case kCol1R: return Kontroller::Button::kCol1Record;
-      case kCol2S: return Kontroller::Button::kCol2Solo;
-      case kCol2M: return Kontroller::Button::kCol2Mute;
-      case kCol2R: return Kontroller::Button::kCol2Record;
-      case kCol3S: return Kontroller::Button::kCol3Solo;
-      case kCol3M: return Kontroller::Button::kCol3Mute;
-      case kCol3R: return Kontroller::Button::kCol3Record;
-      case kCol4S: return Kontroller::Button::kCol4Solo;
-      case kCol4M: return Kontroller::Button::kCol4Mute;
-      case kCol4R: return Kontroller::Button::kCol4Record;
-      case kCol5S: return Kontroller::Button::kCol5Solo;
-      case kCol5M: return Kontroller::Button::kCol5Mute;
-      case kCol5R: return Kontroller::Button::kCol5Record;
-      case kCol6S: return Kontroller::Button::kCol6Solo;
-      case kCol6M: return Kontroller::Button::kCol6Mute;
-      case kCol6R: return Kontroller::Button::kCol6Record;
-      case kCol7S: return Kontroller::Button::kCol7Solo;
-      case kCol7M: return Kontroller::Button::kCol7Mute;
-      case kCol7R: return Kontroller::Button::kCol7Record;
-      case kCol8S: return Kontroller::Button::kCol8Solo;
-      case kCol8M: return Kontroller::Button::kCol8Mute;
-      case kCol8R: return Kontroller::Button::kCol8Record;
+      case kCol1Solo: return Kontroller::Button::kCol1Solo;
+      case kCol1Mute: return Kontroller::Button::kCol1Mute;
+      case kCol1Record: return Kontroller::Button::kCol1Record;
+      case kCol2Solo: return Kontroller::Button::kCol2Solo;
+      case kCol2Mute: return Kontroller::Button::kCol2Mute;
+      case kCol2Record: return Kontroller::Button::kCol2Record;
+      case kCol3Solo: return Kontroller::Button::kCol3Solo;
+      case kCol3Mute: return Kontroller::Button::kCol3Mute;
+      case kCol3Record: return Kontroller::Button::kCol3Record;
+      case kCol4Solo: return Kontroller::Button::kCol4Solo;
+      case kCol4Mute: return Kontroller::Button::kCol4Mute;
+      case kCol4Record: return Kontroller::Button::kCol4Record;
+      case kCol5Solo: return Kontroller::Button::kCol5Solo;
+      case kCol5Mute: return Kontroller::Button::kCol5Mute;
+      case kCol5Record: return Kontroller::Button::kCol5Record;
+      case kCol6Solo: return Kontroller::Button::kCol6Solo;
+      case kCol6Mute: return Kontroller::Button::kCol6Mute;
+      case kCol6Record: return Kontroller::Button::kCol6Record;
+      case kCol7Solo: return Kontroller::Button::kCol7Solo;
+      case kCol7Mute: return Kontroller::Button::kCol7Mute;
+      case kCol7Record: return Kontroller::Button::kCol7Record;
+      case kCol8Solo: return Kontroller::Button::kCol8Solo;
+      case kCol8Mute: return Kontroller::Button::kCol8Mute;
+      case kCol8Record: return Kontroller::Button::kCol8Record;
       default: return Kontroller::Button::kNone;
    }
 }
