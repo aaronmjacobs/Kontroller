@@ -113,9 +113,9 @@ public:
       float dial;
       float slider;
 
-      bool s;
-      bool m;
-      bool r;
+      bool solo;
+      bool mute;
+      bool record;
    };
 
    struct State {
@@ -186,9 +186,9 @@ public:
       State onlyNew = current;
 
       for (size_t i = 0; i < onlyNew.columns.size(); ++i) {
-         onlyNew.columns[i].s = current.columns[i].s && !previous.columns[i].s;
-         onlyNew.columns[i].m = current.columns[i].m && !previous.columns[i].m;
-         onlyNew.columns[i].r = current.columns[i].r && !previous.columns[i].r;
+         onlyNew.columns[i].solo = current.columns[i].solo && !previous.columns[i].solo;
+         onlyNew.columns[i].mute = current.columns[i].mute && !previous.columns[i].mute;
+         onlyNew.columns[i].record = current.columns[i].record && !previous.columns[i].record;
       }
 
       onlyNew.trackLeft = current.trackLeft && !previous.trackLeft;

@@ -73,11 +73,11 @@ void explode(Kontroller* kontroller) {
          size_t col = i / 3;
          bool pressed;
          if (i % 3 == 0) {
-            pressed = state.columns[col].s;
+            pressed = state.columns[col].solo;
          } else if (i % 3 == 1) {
-            pressed = state.columns[col].m;
+            pressed = state.columns[col].mute;
          } else {
-            pressed = state.columns[col].r;
+            pressed = state.columns[col].record;
          }
 
          if (pressed) {
