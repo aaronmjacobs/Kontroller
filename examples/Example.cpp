@@ -170,10 +170,10 @@ int main(int argc, char *argv[]) {
             kontroller.enableLEDControl(controlEnabled);
          }
 
-         if (state.trackRight) {
+         if (state.trackNext) {
             displayFuncIndex = (displayFuncIndex + 1) % displayFunctions.size();
          }
-         if (state.trackLeft) {
+         if (state.trackPrevious) {
             displayFuncIndex = displayFuncIndex == 0 ? displayFunctions.size() - 1 : displayFuncIndex - 1;
          }
 

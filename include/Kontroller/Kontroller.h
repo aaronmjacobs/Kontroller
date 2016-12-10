@@ -15,12 +15,12 @@ class Kontroller {
 public:
    enum class Button {
       kNone,
-      kTrackLeft,
-      kTrackRight,
+      kTrackPrevious,
+      kTrackNext,
       kCycle,
       kMarkerSet,
-      kMarkerLeft,
-      kMarkerRight,
+      kMarkerPrevious,
+      kMarkerNext,
       kRewind,
       kFastForward,
       kStop,
@@ -121,14 +121,14 @@ public:
    struct State {
       std::array<Group, 8> groups;
 
-      bool trackLeft;
-      bool trackRight;
+      bool trackPrevious;
+      bool trackNext;
 
       bool cycle;
 
       bool markerSet;
-      bool markerLeft;
-      bool markerRight;
+      bool markerPrevious;
+      bool markerNext;
 
       bool rewind;
       bool fastForward;
@@ -194,14 +194,14 @@ public:
          onlyNew.groups[i].record = current.groups[i].record && !previous.groups[i].record;
       }
 
-      onlyNew.trackLeft = current.trackLeft && !previous.trackLeft;
-      onlyNew.trackRight = current.trackRight && !previous.trackRight;
+      onlyNew.trackPrevious = current.trackPrevious && !previous.trackPrevious;
+      onlyNew.trackNext = current.trackNext && !previous.trackNext;
 
       onlyNew.cycle = current.cycle && !previous.cycle;
 
       onlyNew.markerSet = current.markerSet && !previous.markerSet;
-      onlyNew.markerLeft = current.markerLeft && !previous.markerLeft;
-      onlyNew.markerRight = current.markerRight && !previous.markerRight;
+      onlyNew.markerPrevious = current.markerPrevious && !previous.markerPrevious;
+      onlyNew.markerNext = current.markerNext && !previous.markerNext;
 
       onlyNew.rewind = current.rewind && !previous.rewind;
       onlyNew.fastForward = current.fastForward && !previous.fastForward;

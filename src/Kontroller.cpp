@@ -4,12 +4,12 @@
 namespace {
 
 enum ControlID : uint8_t {
-   kTrackLeft = 0x3A,
-   kTrackRight = 0x3B,
+   kTrackPrevious = 0x3A,
+   kTrackNext = 0x3B,
    kCycle = 0x2E,
    kMarkerSet = 0x3C,
-   kMarkerLeft = 0x3D,
-   kMarkerRight = 0x3E,
+   kMarkerPrevious = 0x3D,
+   kMarkerNext = 0x3E,
    kRewind = 0x2B,
    kFastForward = 0x2C,
    kStop = 0x2A,
@@ -135,7 +135,7 @@ ControlID idForLED(Kontroller::LED led) {
       case Kontroller::LED::kGroup8Solo: return kGroup8Solo;
       case Kontroller::LED::kGroup8Mute: return kGroup8Mute;
       case Kontroller::LED::kGroup8Record: return kGroup8Record;
-      default: return kTrackLeft;
+      default: return kTrackPrevious;
    }
 }
 
@@ -169,12 +169,12 @@ float* getSliderVal(Kontroller::State &state, uint8_t id) {
 
 bool* getButtonVal(Kontroller::State &state, uint8_t id) {
    switch (id) {
-      case kTrackLeft: return &state.trackLeft;
-      case kTrackRight: return &state.trackRight;
+      case kTrackPrevious: return &state.trackPrevious;
+      case kTrackNext: return &state.trackNext;
       case kCycle: return &state.cycle;
       case kMarkerSet: return &state.markerSet;
-      case kMarkerLeft: return &state.markerLeft;
-      case kMarkerRight: return &state.markerRight;
+      case kMarkerPrevious: return &state.markerPrevious;
+      case kMarkerNext: return &state.markerNext;
       case kRewind: return &state.rewind;
       case kFastForward: return &state.fastForward;
       case kStop: return &state.stop;
@@ -210,12 +210,12 @@ bool* getButtonVal(Kontroller::State &state, uint8_t id) {
 
 Kontroller::Button buttonById(uint8_t id) {
    switch (id) {
-      case kTrackLeft: return Kontroller::Button::kTrackLeft;
-      case kTrackRight: return Kontroller::Button::kTrackRight;
+      case kTrackPrevious: return Kontroller::Button::kTrackPrevious;
+      case kTrackNext: return Kontroller::Button::kTrackNext;
       case kCycle: return Kontroller::Button::kCycle;
       case kMarkerSet: return Kontroller::Button::kMarkerSet;
-      case kMarkerLeft: return Kontroller::Button::kMarkerLeft;
-      case kMarkerRight: return Kontroller::Button::kMarkerRight;
+      case kMarkerPrevious: return Kontroller::Button::kMarkerPrevious;
+      case kMarkerNext: return Kontroller::Button::kMarkerNext;
       case kRewind: return Kontroller::Button::kRewind;
       case kFastForward: return Kontroller::Button::kFastForward;
       case kStop: return Kontroller::Button::kStop;
