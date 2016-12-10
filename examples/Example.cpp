@@ -38,7 +38,7 @@ void doTheWave(Kontroller* kontroller) {
 
    static float t = 0.0f;
 
-   for (int i = 0; i < smrLEDs.size(); i += 3) {
+   for (size_t i = 0; i < smrLEDs.size(); i += 3) {
       float y = sinf(t + (i / 3) * dist);
 
       bool s = y > 0.8f;
@@ -55,7 +55,7 @@ void doTheWave(Kontroller* kontroller) {
 
 void explode(Kontroller* kontroller) {
    if (locMap.empty()) {
-      for (int i = 0; i < smrLEDs.size(); i += 3) {
+      for (size_t i = 0; i < smrLEDs.size(); i += 3) {
          float x = i - 10.0f;
          locMap[smrLEDs[i + 0]] = {x, 3.0f};
          locMap[smrLEDs[i + 1]] = {x, 0.0f};
@@ -69,8 +69,8 @@ void explode(Kontroller* kontroller) {
    static float speed = (kSleepTime / 1000.0f) * 30.0f;
    static Loc origin { 0.0f, 0.0f };
    if (radius == 0.0f) {
-      for (int i = 0; i < smrLEDs.size(); ++i) {
-         int col = i / 3;
+      for (size_t i = 0; i < smrLEDs.size(); ++i) {
+         size_t col = i / 3;
          bool pressed;
          if (i % 3 == 0) {
             pressed = state.columns[col].s;
@@ -105,8 +105,8 @@ void explode(Kontroller* kontroller) {
 void followSliders(Kontroller* kontroller) {
    Kontroller::State state = kontroller->getState();
 
-   for (int i = 0; i < smrLEDs.size(); i += 3) {
-      int col = i / 3;
+   for (size_t i = 0; i < smrLEDs.size(); i += 3) {
+      size_t col = i / 3;
       float val = state.columns[col].slider;
 
       bool s = val > 0.75f;
