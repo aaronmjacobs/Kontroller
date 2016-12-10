@@ -139,29 +139,35 @@ ControlID idForLED(Kontroller::LED led) {
    }
 }
 
-float* getFloatVal(Kontroller::State &state, uint8_t id) {
+float* getDialVal(Kontroller::State &state, uint8_t id) {
    switch (id) {
-      case kCol1Dial: return &state.columns[0].dial;
+   case kCol1Dial: return &state.columns[0].dial;
+   case kCol2Dial: return &state.columns[1].dial;
+   case kCol3Dial: return &state.columns[2].dial;
+   case kCol4Dial: return &state.columns[3].dial;
+   case kCol5Dial: return &state.columns[4].dial;
+   case kCol6Dial: return &state.columns[5].dial;
+   case kCol7Dial: return &state.columns[6].dial;
+   case kCol8Dial: return &state.columns[7].dial;
+   default: return nullptr;
+   }
+}
+
+float* getSliderVal(Kontroller::State &state, uint8_t id) {
+   switch (id) {
       case kCol1Slider: return &state.columns[0].slider;
-      case kCol2Dial: return &state.columns[1].dial;
       case kCol2Slider: return &state.columns[1].slider;
-      case kCol3Dial: return &state.columns[2].dial;
       case kCol3Slider: return &state.columns[2].slider;
-      case kCol4Dial: return &state.columns[3].dial;
       case kCol4Slider: return &state.columns[3].slider;
-      case kCol5Dial: return &state.columns[4].dial;
       case kCol5Slider: return &state.columns[4].slider;
-      case kCol6Dial: return &state.columns[5].dial;
       case kCol6Slider: return &state.columns[5].slider;
-      case kCol7Dial: return &state.columns[6].dial;
       case kCol7Slider: return &state.columns[6].slider;
-      case kCol8Dial: return &state.columns[7].dial;
       case kCol8Slider: return &state.columns[7].slider;
       default: return nullptr;
    }
 }
 
-bool* getBoolVal(Kontroller::State &state, uint8_t id) {
+bool* getButtonVal(Kontroller::State &state, uint8_t id) {
    switch (id) {
       case kTrackLeft: return &state.trackLeft;
       case kTrackRight: return &state.trackRight;
@@ -199,6 +205,75 @@ bool* getBoolVal(Kontroller::State &state, uint8_t id) {
       case kCol8M: return &state.columns[7].m;
       case kCol8R: return &state.columns[7].r;
       default: return nullptr;
+   }
+}
+
+Kontroller::Button buttonById(uint8_t id) {
+   switch (id) {
+      case kTrackLeft: return Kontroller::Button::kTrackLeft;
+      case kTrackRight: return Kontroller::Button::kTrackRight;
+      case kCycle: return Kontroller::Button::kCycle;
+      case kMarkerSet: return Kontroller::Button::kMarkerSet;
+      case kMarkerLeft: return Kontroller::Button::kMarkerLeft;
+      case kMarkerRight: return Kontroller::Button::kMarkerRight;
+      case kRewind: return Kontroller::Button::kRewind;
+      case kFastForward: return Kontroller::Button::kFastForward;
+      case kStop: return Kontroller::Button::kStop;
+      case kPlay: return Kontroller::Button::kPlay;
+      case kRecord: return Kontroller::Button::kRecord;
+      case kCol1S: return Kontroller::Button::kCol1Solo;
+      case kCol1M: return Kontroller::Button::kCol1Mute;
+      case kCol1R: return Kontroller::Button::kCol1Record;
+      case kCol2S: return Kontroller::Button::kCol2Solo;
+      case kCol2M: return Kontroller::Button::kCol2Mute;
+      case kCol2R: return Kontroller::Button::kCol2Record;
+      case kCol3S: return Kontroller::Button::kCol3Solo;
+      case kCol3M: return Kontroller::Button::kCol3Mute;
+      case kCol3R: return Kontroller::Button::kCol3Record;
+      case kCol4S: return Kontroller::Button::kCol4Solo;
+      case kCol4M: return Kontroller::Button::kCol4Mute;
+      case kCol4R: return Kontroller::Button::kCol4Record;
+      case kCol5S: return Kontroller::Button::kCol5Solo;
+      case kCol5M: return Kontroller::Button::kCol5Mute;
+      case kCol5R: return Kontroller::Button::kCol5Record;
+      case kCol6S: return Kontroller::Button::kCol6Solo;
+      case kCol6M: return Kontroller::Button::kCol6Mute;
+      case kCol6R: return Kontroller::Button::kCol6Record;
+      case kCol7S: return Kontroller::Button::kCol7Solo;
+      case kCol7M: return Kontroller::Button::kCol7Mute;
+      case kCol7R: return Kontroller::Button::kCol7Record;
+      case kCol8S: return Kontroller::Button::kCol8Solo;
+      case kCol8M: return Kontroller::Button::kCol8Mute;
+      case kCol8R: return Kontroller::Button::kCol8Record;
+      default: return Kontroller::Button::kNone;
+   }
+}
+
+Kontroller::Dial dialById(uint8_t id) {
+   switch (id) {
+      case kCol1Dial: return Kontroller::Dial::kCol1;
+      case kCol2Dial: return Kontroller::Dial::kCol2;
+      case kCol3Dial: return Kontroller::Dial::kCol3;
+      case kCol4Dial: return Kontroller::Dial::kCol4;
+      case kCol5Dial: return Kontroller::Dial::kCol5;
+      case kCol6Dial: return Kontroller::Dial::kCol6;
+      case kCol7Dial: return Kontroller::Dial::kCol7;
+      case kCol8Dial: return Kontroller::Dial::kCol8;
+      default: return Kontroller::Dial::kNone;
+   }
+}
+
+Kontroller::Slider sliderById(uint8_t id) {
+   switch (id) {
+   case kCol1Slider: return Kontroller::Slider::kCol1;
+   case kCol2Slider: return Kontroller::Slider::kCol2;
+   case kCol3Slider: return Kontroller::Slider::kCol3;
+   case kCol4Slider: return Kontroller::Slider::kCol4;
+   case kCol5Slider: return Kontroller::Slider::kCol5;
+   case kCol6Slider: return Kontroller::Slider::kCol6;
+   case kCol7Slider: return Kontroller::Slider::kCol7;
+   case kCol8Slider: return Kontroller::Slider::kCol8;
+   default: return Kontroller::Slider::kNone;
    }
 }
 
@@ -296,10 +371,21 @@ void Kontroller::threadRun() {
 void Kontroller::processMessage(MidiMessage message) {
    std::lock_guard<std::mutex> lock(valueMutex);
 
-   if (float* floatVal = getFloatVal(state, message.id)) {
-      *floatVal = message.value / 127.0f;
-   } else if (bool *boolVal = getBoolVal(state, message.id)) {
-      *boolVal = message.value != 0;
+   if (bool* buttonVal = getButtonVal(state, message.id)) {
+      *buttonVal = message.value != 0;
+      if (buttonCallback) {
+         buttonCallback(buttonById(message.id), *buttonVal);
+      }
+   } else if (float* dialVal = getDialVal(state, message.id)) {
+      *dialVal = message.value / 127.0f;
+      if (dialCallback) {
+         dialCallback(dialById(message.id), *dialVal);
+      }
+   } else if (float* sliderVal = getSliderVal(state, message.id)) {
+      *sliderVal = message.value / 127.0f;
+      if (sliderCallback) {
+         sliderCallback(sliderById(message.id), *sliderVal);
+      }
    }
 }
 

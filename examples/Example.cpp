@@ -138,6 +138,18 @@ void clearLEDs(Kontroller *kontroller) {
 int main(int argc, char *argv[]) {
    Kontroller kontroller;
 
+   kontroller.setButtonCallback([](Kontroller::Button button, bool pressed) {
+      printf("%d pressed: %d\n", static_cast<int>(button), pressed);
+   });
+
+   kontroller.setDialCallback([](Kontroller::Dial dial, float value) {
+      printf("%d dial val: %f\n", static_cast<int>(dial), value);
+   });
+
+   kontroller.setSliderCallback([](Kontroller::Slider slider, float value) {
+      printf("%d slider val: %f\n", static_cast<int>(slider), value);
+   });
+
    Kontroller::State state = kontroller.getState();
    Kontroller::State current = state;
    Kontroller::State previous = state;
