@@ -75,48 +75,6 @@ public:
 
    class Communicator;
 
-private:
-   struct MidiMessage {
-      uint8_t id;
-      uint8_t value;
-   };
-
-   struct MidiCommand {
-      enum class Type : uint8_t {
-         kControl,
-         kLED
-      };
-
-      Type type;
-      Kontroller::LED led;
-      bool value;
-   };
-
-   static const char* const kDeviceName;
-
-   State state {};
-
-   std::atomic_bool shuttingDown;
-   moodycamel::ReaderWriterQueue<MidiMessage> messageQueue;
-   moodycamel::ReaderWriterQueue<MidiCommand> commandQueue;
-   mutable std::mutex valueMutex;
-   std::condition_variable cv;
-   std::unique_ptr<Communicator> communicator;
-   std::thread thread;
-
-   void update(uint8_t id, uint8_t value);
-
-   void threadRun();
-
-   void processMessage(MidiMessage message);
-
-   void processCommand(MidiCommand command);
-
-   void processControlCommand(bool enable);
-
-   void processLEDCommand(LED led, bool enable);
-
-public:
    Kontroller();
 
    ~Kontroller();
@@ -158,6 +116,46 @@ public:
 
       return onlyNew;
    }
+
+private:
+   struct MidiMessage {
+      uint8_t id;
+      uint8_t value;
+   };
+
+   struct MidiCommand {
+      enum class Type : uint8_t {
+         kControl,
+         kLED
+      };
+
+      Type type;
+      Kontroller::LED led;
+      bool value;
+   };
+
+   static const char* const kDeviceName;
+
+   State state{};
+   std::atomic_bool shuttingDown;
+   moodycamel::ReaderWriterQueue<MidiMessage> messageQueue;
+   moodycamel::ReaderWriterQueue<MidiCommand> commandQueue;
+   mutable std::mutex valueMutex;
+   std::condition_variable cv;
+   std::unique_ptr<Communicator> communicator;
+   std::thread thread;
+
+   void update(uint8_t id, uint8_t value);
+
+   void threadRun();
+
+   void processMessage(MidiMessage message);
+
+   void processCommand(MidiCommand command);
+
+   void processControlCommand(bool enable);
+
+   void processLEDCommand(LED led, bool enable);
 };
 
 #endif

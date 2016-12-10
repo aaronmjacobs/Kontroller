@@ -219,6 +219,29 @@ Kontroller::~Kontroller() {
    thread.join();
 }
 
+bool Kontroller::isConnected() const {
+   return communicator->isConnected();
+}
+
+void Kontroller::enableLEDControl(bool enable) {
+   MidiCommand command{};
+   command.type = MidiCommand::Type::kControl;
+   command.value = enable;
+
+   commandQueue.enqueue(command);
+   cv.notify_all();
+}
+
+void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
+   MidiCommand command{};
+   command.type = MidiCommand::Type::kLED;
+   command.led = led;
+   command.value = on;
+
+   commandQueue.enqueue(command);
+   cv.notify_all();
+}
+
 void Kontroller::update(uint8_t id, uint8_t value) {
    MidiMessage message;
    message.id = id;
@@ -328,27 +351,4 @@ void Kontroller::processLEDCommand(LED led, bool enable) {
 
    // TODO Figure out how to handle failure (error state? callback?)
    //return success;
-}
-
-bool Kontroller::isConnected() const {
-   return communicator->isConnected();
-}
-
-void Kontroller::enableLEDControl(bool enable) {
-   MidiCommand command{};
-   command.type = MidiCommand::Type::kControl;
-   command.value = enable;
-
-   commandQueue.enqueue(command);
-   cv.notify_all();
-}
-
-void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
-   MidiCommand command{};
-   command.type = MidiCommand::Type::kLED;
-   command.led = led;
-   command.value = on;
-
-   commandQueue.enqueue(command);
-   cv.notify_all();
 }
