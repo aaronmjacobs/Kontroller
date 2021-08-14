@@ -8,9 +8,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 endif ()
 
 # Source files
-set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
-set(INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
-set(LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
+set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Source")
+set(INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Include")
+set(LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libraries")
 set(QUEUE_DIR "${LIB_DIR}/readerwriterqueue")
 set(SOURCES)
 list(APPEND SOURCES
