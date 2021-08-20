@@ -52,7 +52,7 @@ private:
    Kontroller& kontroller;
    std::unique_ptr<ImplData> implData;
 
-   std::atomic_bool notifiedOfLostConnection = false;
+   std::atomic_bool notifiedOfLostConnection = {false};
 
    void checkForLostConnection()
    {

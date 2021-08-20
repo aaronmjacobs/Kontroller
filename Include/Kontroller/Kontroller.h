@@ -207,10 +207,10 @@ private:
    std::thread thread;
    std::condition_variable cv;
    std::mutex eventMutex;
-   std::atomic_bool eventPending;
-   std::atomic_bool shuttingDown;
+   std::atomic_bool eventPending = {false};
+   std::atomic_bool shuttingDown = {false};
 
-   std::atomic_bool communicatorConnected;
+   std::atomic_bool communicatorConnected = {false};
 
    moodycamel::ReaderWriterQueue<MidiMessage> messageQueue;
    moodycamel::ReaderWriterQueue<MidiCommand> commandQueue;
