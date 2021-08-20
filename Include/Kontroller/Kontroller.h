@@ -1,7 +1,6 @@
-#ifndef KONTROLLER_H
-#define KONTROLLER_H
+#pragma once
 
-#include "readerwriterqueue.h"
+#include <readerwriterqueue.h>
 
 #include <array>
 #include <condition_variable>
@@ -11,130 +10,138 @@
 #include <mutex>
 #include <thread>
 
-class Kontroller {
+class Kontroller
+{
 public:
-   enum class Button {
-      kNone,
-      kTrackPrevious,
-      kTrackNext,
-      kCycle,
-      kMarkerSet,
-      kMarkerPrevious,
-      kMarkerNext,
-      kRewind,
-      kFastForward,
-      kStop,
-      kPlay,
-      kRecord,
-      kGroup1Solo,
-      kGroup1Mute,
-      kGroup1Record,
-      kGroup2Solo,
-      kGroup2Mute,
-      kGroup2Record,
-      kGroup3Solo,
-      kGroup3Mute,
-      kGroup3Record,
-      kGroup4Solo,
-      kGroup4Mute,
-      kGroup4Record,
-      kGroup5Solo,
-      kGroup5Mute,
-      kGroup5Record,
-      kGroup6Solo,
-      kGroup6Mute,
-      kGroup6Record,
-      kGroup7Solo,
-      kGroup7Mute,
-      kGroup7Record,
-      kGroup8Solo,
-      kGroup8Mute,
-      kGroup8Record
+   enum class Button : uint8_t
+   {
+      None,
+      TrackPrevious,
+      TrackNext,
+      Cycle,
+      MarkerSet,
+      MarkerPrevious,
+      MarkerNext,
+      Rewind,
+      FastForward,
+      Stop,
+      Play,
+      Record,
+      Group1Solo,
+      Group1Mute,
+      Group1Record,
+      Group2Solo,
+      Group2Mute,
+      Group2Record,
+      Group3Solo,
+      Group3Mute,
+      Group3Record,
+      Group4Solo,
+      Group4Mute,
+      Group4Record,
+      Group5Solo,
+      Group5Mute,
+      Group5Record,
+      Group6Solo,
+      Group6Mute,
+      Group6Record,
+      Group7Solo,
+      Group7Mute,
+      Group7Record,
+      Group8Solo,
+      Group8Mute,
+      Group8Record
    };
 
-   enum class Dial {
-      kNone,
-      kGroup1,
-      kGroup2,
-      kGroup3,
-      kGroup4,
-      kGroup5,
-      kGroup6,
-      kGroup7,
-      kGroup8
+   enum class Dial : uint8_t
+   {
+      None,
+      Group1,
+      Group2,
+      Group3,
+      Group4,
+      Group5,
+      Group6,
+      Group7,
+      Group8
    };
 
-   enum class Slider {
-      kNone,
-      kGroup1,
-      kGroup2,
-      kGroup3,
-      kGroup4,
-      kGroup5,
-      kGroup6,
-      kGroup7,
-      kGroup8
+   enum class Slider : uint8_t
+   {
+      None,
+      Group1,
+      Group2,
+      Group3,
+      Group4,
+      Group5,
+      Group6,
+      Group7,
+      Group8
    };
 
-   enum class LED {
-      kCycle,
-      kRewind,
-      kFastForward,
-      kStop,
-      kPlay,
-      kRecord,
-      kGroup1Solo,
-      kGroup1Mute,
-      kGroup1Record,
-      kGroup2Solo,
-      kGroup2Mute,
-      kGroup2Record,
-      kGroup3Solo,
-      kGroup3Mute,
-      kGroup3Record,
-      kGroup4Solo,
-      kGroup4Mute,
-      kGroup4Record,
-      kGroup5Solo,
-      kGroup5Mute,
-      kGroup5Record,
-      kGroup6Solo,
-      kGroup6Mute,
-      kGroup6Record,
-      kGroup7Solo,
-      kGroup7Mute,
-      kGroup7Record,
-      kGroup8Solo,
-      kGroup8Mute,
-      kGroup8Record
+   enum class LED : uint8_t
+   {
+      None,
+      Cycle,
+      Rewind,
+      FastForward,
+      Stop,
+      Play,
+      Record,
+      Group1Solo,
+      Group1Mute,
+      Group1Record,
+      Group2Solo,
+      Group2Mute,
+      Group2Record,
+      Group3Solo,
+      Group3Mute,
+      Group3Record,
+      Group4Solo,
+      Group4Mute,
+      Group4Record,
+      Group5Solo,
+      Group5Mute,
+      Group5Record,
+      Group6Solo,
+      Group6Mute,
+      Group6Record,
+      Group7Solo,
+      Group7Mute,
+      Group7Record,
+      Group8Solo,
+      Group8Mute,
+      Group8Record
    };
 
-   struct Group {
-      float dial;
-      float slider;
+   struct Group
+   {
+      float dial = 0.0f;
+      float slider = 1.0f;
 
-      bool solo;
-      bool mute;
-      bool record;
+      bool solo = false;
+      bool mute = false;
+      bool record = false;
    };
 
-   struct State {
+   struct State
+   {
       std::array<Group, 8> groups;
 
-      bool trackPrevious;
-      bool trackNext;
+      bool trackPrevious = false;
+      bool trackNext = false;
 
-      bool cycle;
+      bool cycle = false;
 
-      bool markerSet;
-      bool markerPrevious;
-      bool markerNext;
+      bool markerSet = false;
+      bool markerPrevious = false;
+      bool markerNext = false;
 
-      bool rewind;
-      bool fastForward;
-      bool stop;
-      bool play;
-      bool record;
+      bool rewind = false;
+      bool fastForward = false;
+      bool stop = false;
+      bool play = false;
+      bool record = false;
    };
 
    class Communicator;
@@ -144,117 +151,72 @@ public:
    using SliderCallback = std::function<void(Slider, float)>;
 
    Kontroller();
-
    ~Kontroller();
 
-   bool isConnected() const;
-
-   State getState() const {
-      std::lock_guard<std::mutex> lock(valueMutex);
-      return state;
+   bool isConnected() const
+   {
+      return communicatorConnected.load();
    }
+
+   State getState() const;
 
    void enableLEDControl(bool enable);
-
    void setLEDOn(LED led, bool on);
 
-   void setButtonCallback(ButtonCallback callback) {
-      std::lock_guard<std::recursive_mutex> lock(callbackMutex);
-      buttonCallback = callback;
-   }
+   void setButtonCallback(ButtonCallback callback);
+   void clearButtonCallback();
 
-   void clearButtonCallback() {
-      setButtonCallback({});
-   }
+   void setDialCallback(DialCallback callback);
+   void clearDialCallback();
 
-   void setDialCallback(DialCallback callback) {
-      std::lock_guard<std::recursive_mutex> lock(callbackMutex);
-      dialCallback = callback;
-   }
+   void setSliderCallback(SliderCallback callback);
+   void clearSliderCallback();
 
-   void clearDialCallback() {
-      setDialCallback({});
-   }
-
-   void setSliderCallback(SliderCallback callback) {
-      std::lock_guard<std::recursive_mutex> lock(callbackMutex);
-      sliderCallback = callback;
-   }
-
-   void clearSliderCallback() {
-      setSliderCallback({});
-   }
-
-   static State onlyNewButtons(const State& previous, const State& current) {
-      State onlyNew = current;
-
-      for (size_t i = 0; i < onlyNew.groups.size(); ++i) {
-         onlyNew.groups[i].solo = current.groups[i].solo && !previous.groups[i].solo;
-         onlyNew.groups[i].mute = current.groups[i].mute && !previous.groups[i].mute;
-         onlyNew.groups[i].record = current.groups[i].record && !previous.groups[i].record;
-      }
-
-      onlyNew.trackPrevious = current.trackPrevious && !previous.trackPrevious;
-      onlyNew.trackNext = current.trackNext && !previous.trackNext;
-
-      onlyNew.cycle = current.cycle && !previous.cycle;
-
-      onlyNew.markerSet = current.markerSet && !previous.markerSet;
-      onlyNew.markerPrevious = current.markerPrevious && !previous.markerPrevious;
-      onlyNew.markerNext = current.markerNext && !previous.markerNext;
-
-      onlyNew.rewind = current.rewind && !previous.rewind;
-      onlyNew.fastForward = current.fastForward && !previous.fastForward;
-      onlyNew.stop = current.stop && !previous.stop;
-      onlyNew.play = current.play && !previous.play;
-      onlyNew.record = current.record && !previous.record;
-
-      return onlyNew;
-   }
+   static State getOnlyNewButtons(const State& previous, const State& current);
 
 private:
-   struct MidiMessage {
-      uint8_t id;
-      uint8_t value;
+   struct MidiMessage
+   {
+      uint8_t id = 0;
+      uint8_t value = 0;
    };
 
-   struct MidiCommand {
-      enum class Type : uint8_t {
-         kControl,
-         kLED
+   struct MidiCommand
+   {
+      enum class Type : uint8_t
+      {
+         Control,
+         LED
       };
 
-      Type type;
-      Kontroller::LED led;
-      bool value;
+      Type type = Type::Control;
+      Kontroller::LED led = Kontroller::LED::None;
+      bool value = false;
    };
+
+   void queueMessage(uint8_t id, uint8_t value);
+
+   void threadRun();
+   void processMessage(MidiMessage message);
 
    static const char* const kDeviceName;
 
-   State state{};
+   State state;
+   mutable std::mutex stateMutex;
+
+   std::thread thread;
+   std::condition_variable cv;
+   std::mutex eventMutex;
+   std::atomic_bool eventPending;
    std::atomic_bool shuttingDown;
+
+   std::atomic_bool communicatorConnected;
+
    moodycamel::ReaderWriterQueue<MidiMessage> messageQueue;
    moodycamel::ReaderWriterQueue<MidiCommand> commandQueue;
-   mutable std::mutex valueMutex;
+
    std::recursive_mutex callbackMutex;
-   std::condition_variable cv;
-   std::unique_ptr<Communicator> communicator;
-   std::thread thread;
    ButtonCallback buttonCallback;
    DialCallback dialCallback;
    SliderCallback sliderCallback;
-
-   void update(uint8_t id, uint8_t value);
-
-   void threadRun();
-
-   void processMessage(MidiMessage message);
-
-   void processCommand(MidiCommand command);
-
-   void processControlCommand(bool enable);
-
-   void processLEDCommand(LED led, bool enable);
 };
-
-#endif

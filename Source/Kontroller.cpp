@@ -1,374 +1,556 @@
 #include "Kontroller/Kontroller.h"
 #include "Communicator.h"
 
-namespace {
+namespace
+{
+   enum class ControlID : uint8_t
+   {
+      TrackPrevious = 0x3A,
+      TrackNext = 0x3B,
+      Cycle = 0x2E,
+      MarkerSet = 0x3C,
+      MarkerPrevious = 0x3D,
+      MarkerNext = 0x3E,
+      Rewind = 0x2B,
+      FastForward = 0x2C,
+      Stop = 0x2A,
+      Play = 0x29,
+      Record = 0x2D,
+      Group1Dial = 0x10,
+      Group1Slider = 0x00,
+      Group1Solo = 0x20,
+      Group1Mute = 0x30,
+      Group1Record = 0x40,
+      Group2Dial = Group1Dial + 1,
+      Group2Slider = Group1Slider + 1,
+      Group2Solo = Group1Solo + 1,
+      Group2Mute = Group1Mute + 1,
+      Group2Record = Group1Record + 1,
+      Group3Dial = Group2Dial + 1,
+      Group3Slider = Group2Slider + 1,
+      Group3Solo = Group2Solo + 1,
+      Group3Mute = Group2Mute + 1,
+      Group3Record = Group2Record + 1,
+      Group4Dial = Group3Dial + 1,
+      Group4Slider = Group3Slider + 1,
+      Group4Solo = Group3Solo + 1,
+      Group4Mute = Group3Mute + 1,
+      Group4Record = Group3Record + 1,
+      Group5Dial = Group4Dial + 1,
+      Group5Slider = Group4Slider + 1,
+      Group5Solo = Group4Solo + 1,
+      Group5Mute = Group4Mute + 1,
+      Group5Record = Group4Record + 1,
+      Group6Dial = Group5Dial + 1,
+      Group6Slider = Group5Slider + 1,
+      Group6Solo = Group5Solo + 1,
+      Group6Mute = Group5Mute + 1,
+      Group6Record = Group5Record + 1,
+      Group7Dial = Group6Dial + 1,
+      Group7Slider = Group6Slider + 1,
+      Group7Solo = Group6Solo + 1,
+      Group7Mute = Group6Mute + 1,
+      Group7Record = Group6Record + 1,
+      Group8Dial = Group7Dial + 1,
+      Group8Slider = Group7Slider + 1,
+      Group8Solo = Group7Solo + 1,
+      Group8Mute = Group7Mute + 1,
+      Group8Record = Group7Record + 1,
+   };
 
-enum ControlID : uint8_t {
-   kTrackPrevious = 0x3A,
-   kTrackNext = 0x3B,
-   kCycle = 0x2E,
-   kMarkerSet = 0x3C,
-   kMarkerPrevious = 0x3D,
-   kMarkerNext = 0x3E,
-   kRewind = 0x2B,
-   kFastForward = 0x2C,
-   kStop = 0x2A,
-   kPlay = 0x29,
-   kRecord = 0x2D,
-   kGroup1Dial = 0x10,
-   kGroup1Slider = 0x00,
-   kGroup1Solo = 0x20,
-   kGroup1Mute = 0x30,
-   kGroup1Record = 0x40,
-   kGroup2Dial = kGroup1Dial + 1,
-   kGroup2Slider = kGroup1Slider + 1,
-   kGroup2Solo = kGroup1Solo + 1,
-   kGroup2Mute = kGroup1Mute + 1,
-   kGroup2Record = kGroup1Record + 1,
-   kGroup3Dial = kGroup2Dial + 1,
-   kGroup3Slider = kGroup2Slider + 1,
-   kGroup3Solo = kGroup2Solo + 1,
-   kGroup3Mute = kGroup2Mute + 1,
-   kGroup3Record = kGroup2Record + 1,
-   kGroup4Dial = kGroup3Dial + 1,
-   kGroup4Slider = kGroup3Slider + 1,
-   kGroup4Solo = kGroup3Solo + 1,
-   kGroup4Mute = kGroup3Mute + 1,
-   kGroup4Record = kGroup3Record + 1,
-   kGroup5Dial = kGroup4Dial + 1,
-   kGroup5Slider = kGroup4Slider + 1,
-   kGroup5Solo = kGroup4Solo + 1,
-   kGroup5Mute = kGroup4Mute + 1,
-   kGroup5Record = kGroup4Record + 1,
-   kGroup6Dial = kGroup5Dial + 1,
-   kGroup6Slider = kGroup5Slider + 1,
-   kGroup6Solo = kGroup5Solo + 1,
-   kGroup6Mute = kGroup5Mute + 1,
-   kGroup6Record = kGroup5Record + 1,
-   kGroup7Dial = kGroup6Dial + 1,
-   kGroup7Slider = kGroup6Slider + 1,
-   kGroup7Solo = kGroup6Solo + 1,
-   kGroup7Mute = kGroup6Mute + 1,
-   kGroup7Record = kGroup6Record + 1,
-   kGroup8Dial = kGroup7Dial + 1,
-   kGroup8Slider = kGroup7Slider + 1,
-   kGroup8Solo = kGroup7Solo + 1,
-   kGroup8Mute = kGroup7Mute + 1,
-   kGroup8Record = kGroup7Record + 1,
-};
+   const std::array<uint8_t, 6> kStartSysex
+   {{
+      0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7
+   }};
 
-const std::array<uint8_t, 6> kStartSysex {{
-   0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7
-}};
+   const std::array<uint8_t, 402> kMainSysex
+   {{
+      0xF0, 0x42, 0x40, 0x00, 0x01, 0x13, 0x00, 0x7F, 0x7F, 0x02, 0x03, 0x05, 0x40, 0x00, 0x00, 0x00,
+      0x00, 0x10, 0x01, 0x00, 0x00, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x10, 0x00, 0x00, 0x7F, 0x00,
+      0x01, 0x00, 0x20, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x30, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
+      0x40, 0x00, 0x7F, 0x00, 0x10, 0x00, 0x01, 0x00, 0x01, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x11,
+      0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x21, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x31, 0x00, 0x00, 0x7F,
+      0x00, 0x01, 0x00, 0x41, 0x00, 0x00, 0x7F, 0x00, 0x10, 0x01, 0x00, 0x02, 0x00, 0x00, 0x7F, 0x00,
+      0x01, 0x00, 0x12, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x22, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
+      0x32, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x42, 0x00, 0x7F, 0x00, 0x10, 0x01, 0x00, 0x00, 0x03,
+      0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x13, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x23, 0x00, 0x00, 0x7F,
+      0x00, 0x01, 0x00, 0x33, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x43, 0x00, 0x7F, 0x00, 0x00, 0x10,
+      0x01, 0x00, 0x04, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x14, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
+      0x24, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x34, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x44, 0x00,
+      0x7F, 0x00, 0x10, 0x01, 0x00, 0x00, 0x05, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x15, 0x00, 0x00, 0x7F,
+      0x00, 0x01, 0x00, 0x25, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x35, 0x00, 0x7F, 0x00, 0x00, 0x01,
+      0x00, 0x45, 0x00, 0x7F, 0x00, 0x00, 0x10, 0x01, 0x00, 0x06, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
+      0x16, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x26, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x36, 0x00,
+      0x7F, 0x00, 0x01, 0x00, 0x46, 0x00, 0x00, 0x7F, 0x00, 0x10, 0x01, 0x00, 0x07, 0x00, 0x00, 0x7F,
+      0x00, 0x01, 0x00, 0x17, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x27, 0x00, 0x7F, 0x00, 0x00, 0x01,
+      0x00, 0x37, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x47, 0x00, 0x7F, 0x00, 0x10, 0x00, 0x01, 0x00,
+      0x3A, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x3B, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x2E, 0x00,
+      0x7F, 0x00, 0x01, 0x00, 0x3C, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x3D, 0x00, 0x00, 0x7F, 0x00,
+      0x01, 0x00, 0x3E, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x2B, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
+      0x2C, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x2A, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x29, 0x00,
+      0x7F, 0x00, 0x01, 0x00, 0x2D, 0x00, 0x00, 0x7F, 0x00, 0x7F, 0x7F, 0x7F, 0x7F, 0x00, 0x7F, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0xF7
+   }};
 
-const std::array<uint8_t, 402> kMainSysex {{
-   0xF0, 0x42, 0x40, 0x00, 0x01, 0x13, 0x00, 0x7F, 0x7F, 0x02, 0x03, 0x05, 0x40, 0x00, 0x00, 0x00,
-   0x00, 0x10, 0x01, 0x00, 0x00, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x10, 0x00, 0x00, 0x7F, 0x00,
-   0x01, 0x00, 0x20, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x30, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
-   0x40, 0x00, 0x7F, 0x00, 0x10, 0x00, 0x01, 0x00, 0x01, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x11,
-   0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x21, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x31, 0x00, 0x00, 0x7F,
-   0x00, 0x01, 0x00, 0x41, 0x00, 0x00, 0x7F, 0x00, 0x10, 0x01, 0x00, 0x02, 0x00, 0x00, 0x7F, 0x00,
-   0x01, 0x00, 0x12, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x22, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
-   0x32, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x42, 0x00, 0x7F, 0x00, 0x10, 0x01, 0x00, 0x00, 0x03,
-   0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x13, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x23, 0x00, 0x00, 0x7F,
-   0x00, 0x01, 0x00, 0x33, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x43, 0x00, 0x7F, 0x00, 0x00, 0x10,
-   0x01, 0x00, 0x04, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x14, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
-   0x24, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x34, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x44, 0x00,
-   0x7F, 0x00, 0x10, 0x01, 0x00, 0x00, 0x05, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x15, 0x00, 0x00, 0x7F,
-   0x00, 0x01, 0x00, 0x25, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x35, 0x00, 0x7F, 0x00, 0x00, 0x01,
-   0x00, 0x45, 0x00, 0x7F, 0x00, 0x00, 0x10, 0x01, 0x00, 0x06, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
-   0x16, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x26, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x36, 0x00,
-   0x7F, 0x00, 0x01, 0x00, 0x46, 0x00, 0x00, 0x7F, 0x00, 0x10, 0x01, 0x00, 0x07, 0x00, 0x00, 0x7F,
-   0x00, 0x01, 0x00, 0x17, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x27, 0x00, 0x7F, 0x00, 0x00, 0x01,
-   0x00, 0x37, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x47, 0x00, 0x7F, 0x00, 0x10, 0x00, 0x01, 0x00,
-   0x3A, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x3B, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x2E, 0x00,
-   0x7F, 0x00, 0x01, 0x00, 0x3C, 0x00, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x3D, 0x00, 0x00, 0x7F, 0x00,
-   0x01, 0x00, 0x3E, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00, 0x2B, 0x00, 0x7F, 0x00, 0x00, 0x01, 0x00,
-   0x2C, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x2A, 0x00, 0x7F, 0x00, 0x01, 0x00, 0x00, 0x29, 0x00,
-   0x7F, 0x00, 0x01, 0x00, 0x2D, 0x00, 0x00, 0x7F, 0x00, 0x7F, 0x7F, 0x7F, 0x7F, 0x00, 0x7F, 0x00,
-   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0x00, 0xF7
-}};
+   const std::array<uint8_t, 11> kSecondSysex
+   {{
+      0xF0, 0x42, 0x40, 0x00, 0x01, 0x13, 0x00, 0x1F, 0x12, 0x00, 0xF7
+   }};
 
-const std::array<uint8_t, 11> kSecondSysex {{
-   0xF0, 0x42, 0x40, 0x00, 0x01, 0x13, 0x00, 0x1F, 0x12, 0x00, 0xF7
-}};
+   const std::array<uint8_t, 11> kEndSysex
+   {{
+      0xF0, 0x42, 0x40, 0x00, 0x01, 0x13, 0x00, 0x1F, 0x11, 0x00, 0xF7
+   }};
 
-const std::array<uint8_t, 11> kEndSysex {{
-   0xF0, 0x42, 0x40, 0x00, 0x01, 0x13, 0x00, 0x1F, 0x11, 0x00, 0xF7
-}};
+   const std::size_t kLEDModeOffset = 16;
 
-const size_t kLEDModeOffset = 16;
-
-const std::chrono::milliseconds kConnectSleepTime = std::chrono::milliseconds(500);
-const std::chrono::milliseconds kMaxWaitTime = std::chrono::milliseconds(500);
-
-ControlID idForLED(Kontroller::LED led) {
-   switch (led) {
-      case Kontroller::LED::kCycle: return kCycle;
-      case Kontroller::LED::kRewind: return kRewind;
-      case Kontroller::LED::kFastForward: return kFastForward;
-      case Kontroller::LED::kStop: return kStop;
-      case Kontroller::LED::kPlay: return kPlay;
-      case Kontroller::LED::kRecord: return kRecord;
-      case Kontroller::LED::kGroup1Solo: return kGroup1Solo;
-      case Kontroller::LED::kGroup1Mute: return kGroup1Mute;
-      case Kontroller::LED::kGroup1Record: return kGroup1Record;
-      case Kontroller::LED::kGroup2Solo: return kGroup2Solo;
-      case Kontroller::LED::kGroup2Mute: return kGroup2Mute;
-      case Kontroller::LED::kGroup2Record: return kGroup2Record;
-      case Kontroller::LED::kGroup3Solo: return kGroup3Solo;
-      case Kontroller::LED::kGroup3Mute: return kGroup3Mute;
-      case Kontroller::LED::kGroup3Record: return kGroup3Record;
-      case Kontroller::LED::kGroup4Solo: return kGroup4Solo;
-      case Kontroller::LED::kGroup4Mute: return kGroup4Mute;
-      case Kontroller::LED::kGroup4Record: return kGroup4Record;
-      case Kontroller::LED::kGroup5Solo: return kGroup5Solo;
-      case Kontroller::LED::kGroup5Mute: return kGroup5Mute;
-      case Kontroller::LED::kGroup5Record: return kGroup5Record;
-      case Kontroller::LED::kGroup6Solo: return kGroup6Solo;
-      case Kontroller::LED::kGroup6Mute: return kGroup6Mute;
-      case Kontroller::LED::kGroup6Record: return kGroup6Record;
-      case Kontroller::LED::kGroup7Solo: return kGroup7Solo;
-      case Kontroller::LED::kGroup7Mute: return kGroup7Mute;
-      case Kontroller::LED::kGroup7Record: return kGroup7Record;
-      case Kontroller::LED::kGroup8Solo: return kGroup8Solo;
-      case Kontroller::LED::kGroup8Mute: return kGroup8Mute;
-      case Kontroller::LED::kGroup8Record: return kGroup8Record;
-      default: return kTrackPrevious;
+   ControlID idForLED(Kontroller::LED led)
+   {
+      switch (led)
+      {
+      case Kontroller::LED::Cycle: return ControlID::Cycle;
+      case Kontroller::LED::Rewind: return ControlID::Rewind;
+      case Kontroller::LED::FastForward: return ControlID::FastForward;
+      case Kontroller::LED::Stop: return ControlID::Stop;
+      case Kontroller::LED::Play: return ControlID::Play;
+      case Kontroller::LED::Record: return ControlID::Record;
+      case Kontroller::LED::Group1Solo: return ControlID::Group1Solo;
+      case Kontroller::LED::Group1Mute: return ControlID::Group1Mute;
+      case Kontroller::LED::Group1Record: return ControlID::Group1Record;
+      case Kontroller::LED::Group2Solo: return ControlID::Group2Solo;
+      case Kontroller::LED::Group2Mute: return ControlID::Group2Mute;
+      case Kontroller::LED::Group2Record: return ControlID::Group2Record;
+      case Kontroller::LED::Group3Solo: return ControlID::Group3Solo;
+      case Kontroller::LED::Group3Mute: return ControlID::Group3Mute;
+      case Kontroller::LED::Group3Record: return ControlID::Group3Record;
+      case Kontroller::LED::Group4Solo: return ControlID::Group4Solo;
+      case Kontroller::LED::Group4Mute: return ControlID::Group4Mute;
+      case Kontroller::LED::Group4Record: return ControlID::Group4Record;
+      case Kontroller::LED::Group5Solo: return ControlID::Group5Solo;
+      case Kontroller::LED::Group5Mute: return ControlID::Group5Mute;
+      case Kontroller::LED::Group5Record: return ControlID::Group5Record;
+      case Kontroller::LED::Group6Solo: return ControlID::Group6Solo;
+      case Kontroller::LED::Group6Mute: return ControlID::Group6Mute;
+      case Kontroller::LED::Group6Record: return ControlID::Group6Record;
+      case Kontroller::LED::Group7Solo: return ControlID::Group7Solo;
+      case Kontroller::LED::Group7Mute: return ControlID::Group7Mute;
+      case Kontroller::LED::Group7Record: return ControlID::Group7Record;
+      case Kontroller::LED::Group8Solo: return ControlID::Group8Solo;
+      case Kontroller::LED::Group8Mute: return ControlID::Group8Mute;
+      case Kontroller::LED::Group8Record: return ControlID::Group8Record;
+      default: return ControlID::TrackPrevious;
+      }
    }
-}
 
-float* getDialVal(Kontroller::State &state, uint8_t id) {
-   switch (id) {
-   case kGroup1Dial: return &state.groups[0].dial;
-   case kGroup2Dial: return &state.groups[1].dial;
-   case kGroup3Dial: return &state.groups[2].dial;
-   case kGroup4Dial: return &state.groups[3].dial;
-   case kGroup5Dial: return &state.groups[4].dial;
-   case kGroup6Dial: return &state.groups[5].dial;
-   case kGroup7Dial: return &state.groups[6].dial;
-   case kGroup8Dial: return &state.groups[7].dial;
-   default: return nullptr;
+   Kontroller::Button buttonById(uint8_t id)
+   {
+      ControlID controlId = static_cast<ControlID>(id);
+      switch (controlId)
+      {
+      case ControlID::TrackPrevious: return Kontroller::Button::TrackPrevious;
+      case ControlID::TrackNext: return Kontroller::Button::TrackNext;
+      case ControlID::Cycle: return Kontroller::Button::Cycle;
+      case ControlID::MarkerSet: return Kontroller::Button::MarkerSet;
+      case ControlID::MarkerPrevious: return Kontroller::Button::MarkerPrevious;
+      case ControlID::MarkerNext: return Kontroller::Button::MarkerNext;
+      case ControlID::Rewind: return Kontroller::Button::Rewind;
+      case ControlID::FastForward: return Kontroller::Button::FastForward;
+      case ControlID::Stop: return Kontroller::Button::Stop;
+      case ControlID::Play: return Kontroller::Button::Play;
+      case ControlID::Record: return Kontroller::Button::Record;
+      case ControlID::Group1Solo: return Kontroller::Button::Group1Solo;
+      case ControlID::Group1Mute: return Kontroller::Button::Group1Mute;
+      case ControlID::Group1Record: return Kontroller::Button::Group1Record;
+      case ControlID::Group2Solo: return Kontroller::Button::Group2Solo;
+      case ControlID::Group2Mute: return Kontroller::Button::Group2Mute;
+      case ControlID::Group2Record: return Kontroller::Button::Group2Record;
+      case ControlID::Group3Solo: return Kontroller::Button::Group3Solo;
+      case ControlID::Group3Mute: return Kontroller::Button::Group3Mute;
+      case ControlID::Group3Record: return Kontroller::Button::Group3Record;
+      case ControlID::Group4Solo: return Kontroller::Button::Group4Solo;
+      case ControlID::Group4Mute: return Kontroller::Button::Group4Mute;
+      case ControlID::Group4Record: return Kontroller::Button::Group4Record;
+      case ControlID::Group5Solo: return Kontroller::Button::Group5Solo;
+      case ControlID::Group5Mute: return Kontroller::Button::Group5Mute;
+      case ControlID::Group5Record: return Kontroller::Button::Group5Record;
+      case ControlID::Group6Solo: return Kontroller::Button::Group6Solo;
+      case ControlID::Group6Mute: return Kontroller::Button::Group6Mute;
+      case ControlID::Group6Record: return Kontroller::Button::Group6Record;
+      case ControlID::Group7Solo: return Kontroller::Button::Group7Solo;
+      case ControlID::Group7Mute: return Kontroller::Button::Group7Mute;
+      case ControlID::Group7Record: return Kontroller::Button::Group7Record;
+      case ControlID::Group8Solo: return Kontroller::Button::Group8Solo;
+      case ControlID::Group8Mute: return Kontroller::Button::Group8Mute;
+      case ControlID::Group8Record: return Kontroller::Button::Group8Record;
+      default: return Kontroller::Button::None;
+      }
    }
-}
 
-float* getSliderVal(Kontroller::State &state, uint8_t id) {
-   switch (id) {
-      case kGroup1Slider: return &state.groups[0].slider;
-      case kGroup2Slider: return &state.groups[1].slider;
-      case kGroup3Slider: return &state.groups[2].slider;
-      case kGroup4Slider: return &state.groups[3].slider;
-      case kGroup5Slider: return &state.groups[4].slider;
-      case kGroup6Slider: return &state.groups[5].slider;
-      case kGroup7Slider: return &state.groups[6].slider;
-      case kGroup8Slider: return &state.groups[7].slider;
+   Kontroller::Dial dialById(uint8_t id)
+   {
+      ControlID controlId = static_cast<ControlID>(id);
+      switch (controlId)
+      {
+      case ControlID::Group1Dial: return Kontroller::Dial::Group1;
+      case ControlID::Group2Dial: return Kontroller::Dial::Group2;
+      case ControlID::Group3Dial: return Kontroller::Dial::Group3;
+      case ControlID::Group4Dial: return Kontroller::Dial::Group4;
+      case ControlID::Group5Dial: return Kontroller::Dial::Group5;
+      case ControlID::Group6Dial: return Kontroller::Dial::Group6;
+      case ControlID::Group7Dial: return Kontroller::Dial::Group7;
+      case ControlID::Group8Dial: return Kontroller::Dial::Group8;
+      default: return Kontroller::Dial::None;
+      }
+   }
+
+   Kontroller::Slider sliderById(uint8_t id)
+   {
+      ControlID controlId = static_cast<ControlID>(id);
+      switch (controlId)
+      {
+      case ControlID::Group1Slider: return Kontroller::Slider::Group1;
+      case ControlID::Group2Slider: return Kontroller::Slider::Group2;
+      case ControlID::Group3Slider: return Kontroller::Slider::Group3;
+      case ControlID::Group4Slider: return Kontroller::Slider::Group4;
+      case ControlID::Group5Slider: return Kontroller::Slider::Group5;
+      case ControlID::Group6Slider: return Kontroller::Slider::Group6;
+      case ControlID::Group7Slider: return Kontroller::Slider::Group7;
+      case ControlID::Group8Slider: return Kontroller::Slider::Group8;
+      default: return Kontroller::Slider::None;
+      }
+   }
+
+   float* getDialVal(Kontroller::State& state, uint8_t id)
+   {
+      ControlID controlId = static_cast<ControlID>(id);
+      switch (controlId)
+      {
+      case ControlID::Group1Dial: return &state.groups[0].dial;
+      case ControlID::Group2Dial: return &state.groups[1].dial;
+      case ControlID::Group3Dial: return &state.groups[2].dial;
+      case ControlID::Group4Dial: return &state.groups[3].dial;
+      case ControlID::Group5Dial: return &state.groups[4].dial;
+      case ControlID::Group6Dial: return &state.groups[5].dial;
+      case ControlID::Group7Dial: return &state.groups[6].dial;
+      case ControlID::Group8Dial: return &state.groups[7].dial;
       default: return nullptr;
+      }
    }
-}
 
-bool* getButtonVal(Kontroller::State &state, uint8_t id) {
-   switch (id) {
-      case kTrackPrevious: return &state.trackPrevious;
-      case kTrackNext: return &state.trackNext;
-      case kCycle: return &state.cycle;
-      case kMarkerSet: return &state.markerSet;
-      case kMarkerPrevious: return &state.markerPrevious;
-      case kMarkerNext: return &state.markerNext;
-      case kRewind: return &state.rewind;
-      case kFastForward: return &state.fastForward;
-      case kStop: return &state.stop;
-      case kPlay: return &state.play;
-      case kRecord: return &state.record;
-      case kGroup1Solo: return &state.groups[0].solo;
-      case kGroup1Mute: return &state.groups[0].mute;
-      case kGroup1Record: return &state.groups[0].record;
-      case kGroup2Solo: return &state.groups[1].solo;
-      case kGroup2Mute: return &state.groups[1].mute;
-      case kGroup2Record: return &state.groups[1].record;
-      case kGroup3Solo: return &state.groups[2].solo;
-      case kGroup3Mute: return &state.groups[2].mute;
-      case kGroup3Record: return &state.groups[2].record;
-      case kGroup4Solo: return &state.groups[3].solo;
-      case kGroup4Mute: return &state.groups[3].mute;
-      case kGroup4Record: return &state.groups[3].record;
-      case kGroup5Solo: return &state.groups[4].solo;
-      case kGroup5Mute: return &state.groups[4].mute;
-      case kGroup5Record: return &state.groups[4].record;
-      case kGroup6Solo: return &state.groups[5].solo;
-      case kGroup6Mute: return &state.groups[5].mute;
-      case kGroup6Record: return &state.groups[5].record;
-      case kGroup7Solo: return &state.groups[6].solo;
-      case kGroup7Mute: return &state.groups[6].mute;
-      case kGroup7Record: return &state.groups[6].record;
-      case kGroup8Solo: return &state.groups[7].solo;
-      case kGroup8Mute: return &state.groups[7].mute;
-      case kGroup8Record: return &state.groups[7].record;
+   float* getSliderVal(Kontroller::State& state, uint8_t id)
+   {
+      ControlID controlId = static_cast<ControlID>(id);
+      switch (controlId)
+      {
+      case ControlID::Group1Slider: return &state.groups[0].slider;
+      case ControlID::Group2Slider: return &state.groups[1].slider;
+      case ControlID::Group3Slider: return &state.groups[2].slider;
+      case ControlID::Group4Slider: return &state.groups[3].slider;
+      case ControlID::Group5Slider: return &state.groups[4].slider;
+      case ControlID::Group6Slider: return &state.groups[5].slider;
+      case ControlID::Group7Slider: return &state.groups[6].slider;
+      case ControlID::Group8Slider: return &state.groups[7].slider;
       default: return nullptr;
+      }
+   }
+
+   bool* getButtonVal(Kontroller::State& state, uint8_t id)
+   {
+      ControlID controlId = static_cast<ControlID>(id);
+      switch (controlId)
+      {
+      case ControlID::TrackPrevious: return &state.trackPrevious;
+      case ControlID::TrackNext: return &state.trackNext;
+      case ControlID::Cycle: return &state.cycle;
+      case ControlID::MarkerSet: return &state.markerSet;
+      case ControlID::MarkerPrevious: return &state.markerPrevious;
+      case ControlID::MarkerNext: return &state.markerNext;
+      case ControlID::Rewind: return &state.rewind;
+      case ControlID::FastForward: return &state.fastForward;
+      case ControlID::Stop: return &state.stop;
+      case ControlID::Play: return &state.play;
+      case ControlID::Record: return &state.record;
+      case ControlID::Group1Solo: return &state.groups[0].solo;
+      case ControlID::Group1Mute: return &state.groups[0].mute;
+      case ControlID::Group1Record: return &state.groups[0].record;
+      case ControlID::Group2Solo: return &state.groups[1].solo;
+      case ControlID::Group2Mute: return &state.groups[1].mute;
+      case ControlID::Group2Record: return &state.groups[1].record;
+      case ControlID::Group3Solo: return &state.groups[2].solo;
+      case ControlID::Group3Mute: return &state.groups[2].mute;
+      case ControlID::Group3Record: return &state.groups[2].record;
+      case ControlID::Group4Solo: return &state.groups[3].solo;
+      case ControlID::Group4Mute: return &state.groups[3].mute;
+      case ControlID::Group4Record: return &state.groups[3].record;
+      case ControlID::Group5Solo: return &state.groups[4].solo;
+      case ControlID::Group5Mute: return &state.groups[4].mute;
+      case ControlID::Group5Record: return &state.groups[4].record;
+      case ControlID::Group6Solo: return &state.groups[5].solo;
+      case ControlID::Group6Mute: return &state.groups[5].mute;
+      case ControlID::Group6Record: return &state.groups[5].record;
+      case ControlID::Group7Solo: return &state.groups[6].solo;
+      case ControlID::Group7Mute: return &state.groups[6].mute;
+      case ControlID::Group7Record: return &state.groups[6].record;
+      case ControlID::Group8Solo: return &state.groups[7].solo;
+      case ControlID::Group8Mute: return &state.groups[7].mute;
+      case ControlID::Group8Record: return &state.groups[7].record;
+      default: return nullptr;
+      }
+   }
+
+   bool processControlCommand(Kontroller::Communicator& communicator, bool enable)
+   {
+      bool success = communicator.initializeMessage();
+
+      success = success && communicator.appendToMessage(kStartSysex);
+      success = success && communicator.appendToMessage(kSecondSysex);
+
+      success = success && communicator.appendToMessage(kStartSysex);
+      if (enable)
+      {
+         auto enableSysex = kMainSysex;
+         enableSysex[kLEDModeOffset] = 0x01;
+         success = success && communicator.appendToMessage(enableSysex);
+      }
+      else
+      {
+         success = success && communicator.appendToMessage(kMainSysex);
+      }
+
+      success = success && communicator.appendToMessage(kStartSysex);
+      success = success && communicator.appendToMessage(kEndSysex);
+
+      success = success && communicator.finalizeMessage();
+
+      return success;
+   }
+
+   bool processLEDCommand(Kontroller::Communicator& communicator, Kontroller::LED led, bool enable)
+   {
+      std::array<uint8_t, 3> sendData;
+      sendData[0] = 0xB0;
+      sendData[1] = static_cast<uint8_t>(idForLED(led));
+      sendData[2] = enable ? 0x7F : 0x00;
+
+      bool success = communicator.initializeMessage();
+      success = success && communicator.appendToMessage(sendData);
+      success = success && communicator.finalizeMessage();
+
+      return success;
    }
 }
-
-Kontroller::Button buttonById(uint8_t id) {
-   switch (id) {
-      case kTrackPrevious: return Kontroller::Button::kTrackPrevious;
-      case kTrackNext: return Kontroller::Button::kTrackNext;
-      case kCycle: return Kontroller::Button::kCycle;
-      case kMarkerSet: return Kontroller::Button::kMarkerSet;
-      case kMarkerPrevious: return Kontroller::Button::kMarkerPrevious;
-      case kMarkerNext: return Kontroller::Button::kMarkerNext;
-      case kRewind: return Kontroller::Button::kRewind;
-      case kFastForward: return Kontroller::Button::kFastForward;
-      case kStop: return Kontroller::Button::kStop;
-      case kPlay: return Kontroller::Button::kPlay;
-      case kRecord: return Kontroller::Button::kRecord;
-      case kGroup1Solo: return Kontroller::Button::kGroup1Solo;
-      case kGroup1Mute: return Kontroller::Button::kGroup1Mute;
-      case kGroup1Record: return Kontroller::Button::kGroup1Record;
-      case kGroup2Solo: return Kontroller::Button::kGroup2Solo;
-      case kGroup2Mute: return Kontroller::Button::kGroup2Mute;
-      case kGroup2Record: return Kontroller::Button::kGroup2Record;
-      case kGroup3Solo: return Kontroller::Button::kGroup3Solo;
-      case kGroup3Mute: return Kontroller::Button::kGroup3Mute;
-      case kGroup3Record: return Kontroller::Button::kGroup3Record;
-      case kGroup4Solo: return Kontroller::Button::kGroup4Solo;
-      case kGroup4Mute: return Kontroller::Button::kGroup4Mute;
-      case kGroup4Record: return Kontroller::Button::kGroup4Record;
-      case kGroup5Solo: return Kontroller::Button::kGroup5Solo;
-      case kGroup5Mute: return Kontroller::Button::kGroup5Mute;
-      case kGroup5Record: return Kontroller::Button::kGroup5Record;
-      case kGroup6Solo: return Kontroller::Button::kGroup6Solo;
-      case kGroup6Mute: return Kontroller::Button::kGroup6Mute;
-      case kGroup6Record: return Kontroller::Button::kGroup6Record;
-      case kGroup7Solo: return Kontroller::Button::kGroup7Solo;
-      case kGroup7Mute: return Kontroller::Button::kGroup7Mute;
-      case kGroup7Record: return Kontroller::Button::kGroup7Record;
-      case kGroup8Solo: return Kontroller::Button::kGroup8Solo;
-      case kGroup8Mute: return Kontroller::Button::kGroup8Mute;
-      case kGroup8Record: return Kontroller::Button::kGroup8Record;
-      default: return Kontroller::Button::kNone;
-   }
-}
-
-Kontroller::Dial dialById(uint8_t id) {
-   switch (id) {
-      case kGroup1Dial: return Kontroller::Dial::kGroup1;
-      case kGroup2Dial: return Kontroller::Dial::kGroup2;
-      case kGroup3Dial: return Kontroller::Dial::kGroup3;
-      case kGroup4Dial: return Kontroller::Dial::kGroup4;
-      case kGroup5Dial: return Kontroller::Dial::kGroup5;
-      case kGroup6Dial: return Kontroller::Dial::kGroup6;
-      case kGroup7Dial: return Kontroller::Dial::kGroup7;
-      case kGroup8Dial: return Kontroller::Dial::kGroup8;
-      default: return Kontroller::Dial::kNone;
-   }
-}
-
-Kontroller::Slider sliderById(uint8_t id) {
-   switch (id) {
-   case kGroup1Slider: return Kontroller::Slider::kGroup1;
-   case kGroup2Slider: return Kontroller::Slider::kGroup2;
-   case kGroup3Slider: return Kontroller::Slider::kGroup3;
-   case kGroup4Slider: return Kontroller::Slider::kGroup4;
-   case kGroup5Slider: return Kontroller::Slider::kGroup5;
-   case kGroup6Slider: return Kontroller::Slider::kGroup6;
-   case kGroup7Slider: return Kontroller::Slider::kGroup7;
-   case kGroup8Slider: return Kontroller::Slider::kGroup8;
-   default: return Kontroller::Slider::kNone;
-   }
-}
-
-} // namespace
-
-// static
-const char* const Kontroller::kDeviceName = "nanoKONTROL2";
 
 Kontroller::Kontroller()
-   : shuttingDown(false), communicator(std::make_unique<Communicator>(this)), thread([this]{ threadRun(); }) {
+   : thread([this]{ threadRun(); })
+{
 }
 
-// This must be defined here so that the default deleter can be used for Kontroller::Communicator (which is an
-// incomplete type in Kontroller.h)
-Kontroller::~Kontroller() {
-   shuttingDown = true;
+Kontroller::~Kontroller()
+{
+   {
+      std::unique_lock<std::mutex> lock(eventMutex);
+      shuttingDown.store(true);
+   }
    cv.notify_all();
+
    thread.join();
 }
 
-bool Kontroller::isConnected() const {
-   return communicator->isConnected();
+Kontroller::State Kontroller::getState() const
+{
+   std::lock_guard<std::mutex> lock(stateMutex);
+   return state;
 }
 
-void Kontroller::enableLEDControl(bool enable) {
-   MidiCommand command{};
-   command.type = MidiCommand::Type::kControl;
+void Kontroller::enableLEDControl(bool enable)
+{
+   MidiCommand command;
+   command.type = MidiCommand::Type::Control;
    command.value = enable;
 
    commandQueue.enqueue(command);
+
+   {
+      std::unique_lock<std::mutex> lock(eventMutex);
+      eventPending.store(true);
+   }
    cv.notify_all();
 }
 
-void Kontroller::setLEDOn(Kontroller::LED led, bool on) {
-   MidiCommand command{};
-   command.type = MidiCommand::Type::kLED;
+void Kontroller::setLEDOn(Kontroller::LED led, bool on)
+{
+   MidiCommand command;
+   command.type = MidiCommand::Type::LED;
    command.led = led;
    command.value = on;
 
    commandQueue.enqueue(command);
+
+   {
+      std::unique_lock<std::mutex> lock(eventMutex);
+      eventPending.store(true);
+   }
    cv.notify_all();
 }
 
-void Kontroller::update(uint8_t id, uint8_t value) {
+void Kontroller::setButtonCallback(ButtonCallback callback)
+{
+   std::lock_guard<std::recursive_mutex> lock(callbackMutex);
+   buttonCallback = std::move(callback);
+}
+
+void Kontroller::clearButtonCallback()
+{
+   setButtonCallback({});
+}
+
+void Kontroller::setDialCallback(DialCallback callback)
+{
+   std::lock_guard<std::recursive_mutex> lock(callbackMutex);
+   dialCallback = std::move(callback);
+}
+
+void Kontroller::clearDialCallback()
+{
+   setDialCallback({});
+}
+
+void Kontroller::setSliderCallback(SliderCallback callback)
+{
+   std::lock_guard<std::recursive_mutex> lock(callbackMutex);
+   sliderCallback = std::move(callback);
+}
+
+void Kontroller::clearSliderCallback()
+{
+   setSliderCallback({});
+}
+
+// static
+Kontroller::State Kontroller::getOnlyNewButtons(const State& previous, const State& current)
+{
+   State onlyNew = current;
+
+   for (std::size_t i = 0; i < onlyNew.groups.size(); ++i)
+   {
+      onlyNew.groups[i].solo = current.groups[i].solo && !previous.groups[i].solo;
+      onlyNew.groups[i].mute = current.groups[i].mute && !previous.groups[i].mute;
+      onlyNew.groups[i].record = current.groups[i].record && !previous.groups[i].record;
+   }
+
+   onlyNew.trackPrevious = current.trackPrevious && !previous.trackPrevious;
+   onlyNew.trackNext = current.trackNext && !previous.trackNext;
+
+   onlyNew.cycle = current.cycle && !previous.cycle;
+
+   onlyNew.markerSet = current.markerSet && !previous.markerSet;
+   onlyNew.markerPrevious = current.markerPrevious && !previous.markerPrevious;
+   onlyNew.markerNext = current.markerNext && !previous.markerNext;
+
+   onlyNew.rewind = current.rewind && !previous.rewind;
+   onlyNew.fastForward = current.fastForward && !previous.fastForward;
+   onlyNew.stop = current.stop && !previous.stop;
+   onlyNew.play = current.play && !previous.play;
+   onlyNew.record = current.record && !previous.record;
+
+   return onlyNew;
+}
+
+// static
+const char* const Kontroller::kDeviceName = "nanoKONTROL2";
+
+void Kontroller::queueMessage(uint8_t id, uint8_t value)
+{
    MidiMessage message;
    message.id = id;
    message.value = value;
 
    messageQueue.enqueue(message);
+
+   {
+      std::unique_lock<std::mutex> lock(eventMutex);
+      eventPending.store(true);
+   }
    cv.notify_all();
 }
 
-void Kontroller::threadRun() {
-   std::mutex lifetimeMutex;
-   std::unique_lock<std::mutex> lock(lifetimeMutex);
+void Kontroller::threadRun()
+{
+   Communicator communicator(*this);
+   bool wasConnected = false;
 
    bool shouldExit = false;
-   while (!shouldExit) {
-      // Wait until there's something to do
-      cv.wait_for(lock, kMaxWaitTime, [this]{
-         return messageQueue.peek() != nullptr || commandQueue.peek() != nullptr || !communicator->isConnected();
-      });
+   while (!shouldExit)
+   {
+      {
+         // Wait until there's something to do (with a timeout for handling (dis)connection)
+         std::unique_lock<std::mutex> lock(eventMutex);
+         cv.wait_for(lock, std::chrono::milliseconds(1000), [this]
+         {
+            return shuttingDown.load() || eventPending.load();
+         });
+
+         eventPending.store(false);
+      }
 
       // Only update whether we should exit here, so that we make sure to send any final commands before shutting down
       shouldExit = shuttingDown;
 
       // Read any pending messages
       MidiMessage message;
-      while (messageQueue.try_dequeue(message)) {
+      while (messageQueue.try_dequeue(message))
+      {
          processMessage(message);
       }
 
       // Poll the communicator (to check for disconnection)
-      communicator->poll();
+      communicator.poll();
 
       // Check if we're still connected
-      bool isConnected = communicator->isConnected();
-      if (!isConnected && !shuttingDown) {
-         isConnected = communicator->connect();
+      bool isConnected = communicator.isConnected();
+      if (!isConnected && !shouldExit)
+      {
+         isConnected = communicator.connect();
       }
 
-      if (isConnected) {
-         // Send any pending commands
+      // Update connection status
+      if (isConnected != wasConnected)
+      {
+         communicatorConnected.store(isConnected);
+      }
+      wasConnected = isConnected;
+
+      // Send any pending commands (if connected)
+      if (isConnected)
+      {
          MidiCommand command;
-         while (commandQueue.try_dequeue(command)) {
-            processCommand(command);
+         while (commandQueue.try_dequeue(command))
+         {
+            bool success = false;
+            switch (command.type)
+            {
+            case MidiCommand::Type::Control:
+               success = processControlCommand(communicator, command.value);
+               break;
+            case MidiCommand::Type::LED:
+               success = processLEDCommand(communicator, command.led, command.value);
+               break;
+            default:
+               break;
+            }
+
+            if (!success)
+            {
+               break;
+            }
          }
-      } else if (!shuttingDown) {
-         // Sleep a bit before trying to connect again
-         std::this_thread::sleep_for(kConnectSleepTime);
       }
    }
 }
 
-void Kontroller::processMessage(MidiMessage message) {
+void Kontroller::processMessage(MidiMessage message)
+{
    bool isButton = false;
    bool isDial = false;
    bool isSlider = false;
@@ -378,21 +560,24 @@ void Kontroller::processMessage(MidiMessage message) {
    float sliderValue = 0.0f;
 
    {
-      std::lock_guard<std::mutex> lock(valueMutex);
+      std::lock_guard<std::mutex> lock(stateMutex);
 
-      if (bool* buttonVal = getButtonVal(state, message.id)) {
+      if (bool* buttonVal = getButtonVal(state, message.id))
+      {
          *buttonVal = message.value != 0;
 
          isButton = true;
          buttonValue = *buttonVal;
       }
-      else if (float* dialVal = getDialVal(state, message.id)) {
+      else if (float* dialVal = getDialVal(state, message.id))
+      {
          *dialVal = message.value / 127.0f;
 
          isDial = true;
          dialValue = *dialVal;
       }
-      else if (float* sliderVal = getSliderVal(state, message.id)) {
+      else if (float* sliderVal = getSliderVal(state, message.id))
+      {
          *sliderVal = message.value / 127.0f;
 
          isSlider = true;
@@ -403,62 +588,17 @@ void Kontroller::processMessage(MidiMessage message) {
    {
       std::lock_guard<std::recursive_mutex> lock(callbackMutex);
 
-      if (isButton && buttonCallback) {
+      if (isButton && buttonCallback)
+      {
          buttonCallback(buttonById(message.id), buttonValue);
-      } else if (isDial && dialCallback) {
+      }
+      else if (isDial && dialCallback)
+      {
          dialCallback(dialById(message.id), dialValue);
-      } else if (isSlider && sliderCallback) {
+      }
+      else if (isSlider && sliderCallback)
+      {
          sliderCallback(sliderById(message.id), sliderValue);
       }
    }
-}
-
-void Kontroller::processCommand(MidiCommand command) {
-   switch (command.type) {
-      case MidiCommand::Type::kControl:
-         processControlCommand(command.value);
-         break;
-      case MidiCommand::Type::kLED:
-         processLEDCommand(command.led, command.value);
-         break;
-   }
-}
-
-void Kontroller::processControlCommand(bool enable) {
-   bool success = communicator->initializeMessage();
-
-   success = success && communicator->appendToMessage(kStartSysex);
-   success = success && communicator->appendToMessage(kSecondSysex);
-
-   success = success && communicator->appendToMessage(kStartSysex);
-   if (enable) {
-      constexpr size_t size = kMainSysex.size();
-      std::array<uint8_t, size> enableSysex(kMainSysex);
-      enableSysex[kLEDModeOffset] = 0x01;
-      success = success && communicator->appendToMessage(enableSysex);
-   } else {
-      success = success && communicator->appendToMessage(kMainSysex);
-   }
-
-   success = success && communicator->appendToMessage(kStartSysex);
-   success = success && communicator->appendToMessage(kEndSysex);
-
-   success = success && communicator->finalizeMessage();
-
-   // TODO Figure out how to handle failure (error state? callback?)
-   //return success;
-}
-
-void Kontroller::processLEDCommand(LED led, bool enable) {
-   std::array<uint8_t, 3> sendData;
-   sendData[0] = 0xB0;
-   sendData[1] = idForLED(led);
-   sendData[2] = enable ? 0x7F : 0x00;
-
-   bool success = communicator->initializeMessage();
-   success = success && communicator->appendToMessage(sendData);
-   success = success && communicator->finalizeMessage();
-
-   // TODO Figure out how to handle failure (error state? callback?)
-   //return success;
 }

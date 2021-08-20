@@ -1,62 +1,65 @@
-#ifndef KONTROLLER_COMMUNICATOR_H
-#define KONTROLLER_COMMUNICATOR_H
+#pragma once
 
 #include "Kontroller/Kontroller.h"
 
-class Kontroller::Communicator {
-private:
+#include <array>
+#include <atomic>
+#include <cstdint>
+#include <memory>
+
+class Kontroller::Communicator
+{
+public:
    struct ImplData;
 
-   std::unique_ptr<ImplData> implData;
-   Kontroller* kontroller {};
-   bool notifiedOfLostConnection {};
-   std::mutex lostConnectionMutex;
-
-   bool appendToMessage(uint8_t* data, size_t numBytes);
-
-   void checkForLostConnection() {
-      std::lock_guard<std::mutex> lock(lostConnectionMutex);
-
-      if (notifiedOfLostConnection) {
-         notifiedOfLostConnection = false;
-         disconnect();
-      }
-   }
-
-public:
-   Communicator(Kontroller* kontroller);
-
+   Communicator(Kontroller& owningKontroller);
    ~Communicator();
 
-   const ImplData& getImplData() const {
+   const ImplData& getImplData() const
+   {
       return *implData;
    }
 
    bool isConnected() const;
 
    bool connect();
-
    void disconnect();
-
    void poll();
 
    bool initializeMessage();
 
-   template<size_t numBytes>
-   bool appendToMessage(std::array<uint8_t, numBytes> data) {
+   template<size_t NumBytes>
+   bool appendToMessage(std::array<uint8_t, NumBytes> data)
+   {
       return appendToMessage(data.data(), data.size());
    }
 
+   bool appendToMessage(uint8_t* data, size_t numBytes);
+
    bool finalizeMessage();
 
-   void onMessageReceived(uint8_t id, uint8_t value) {
-      kontroller->update(id, value);
+   void onMessageReceived(uint8_t id, uint8_t value)
+   {
+      kontroller.queueMessage(id, value);
    }
 
-   void onConnectionLost() {
-      std::lock_guard<std::mutex> lock(lostConnectionMutex);
-      notifiedOfLostConnection = true;
+   void onConnectionLost()
+   {
+      notifiedOfLostConnection.store(true);
+   }
+
+private:
+   Kontroller& kontroller;
+   std::unique_ptr<ImplData> implData;
+
+   std::atomic_bool notifiedOfLostConnection = false;
+
+   void checkForLostConnection()
+   {
+      bool connectionLost = notifiedOfLostConnection.exchange(false);
+      if (connectionLost)
+      {
+         disconnect();
+      }
    }
 };
-
-#endif
