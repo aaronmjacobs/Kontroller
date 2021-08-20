@@ -30,15 +30,15 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 if (APPLE)
    target_sources(${PROJECT_NAME} PRIVATE
-      "${SRC_DIR}/Communicator_osx.cpp"
+      "${SRC_DIR}/Communicator_macOS.cpp"
    )
 elseif (WIN32)
    target_sources(${PROJECT_NAME} PRIVATE
-      "${SRC_DIR}/Communicator_win.cpp"
+      "${SRC_DIR}/Communicator_Windows.cpp"
    )
 elseif (LINUX)
    target_sources(${PROJECT_NAME} PRIVATE
-      "${SRC_DIR}/Communicator_linux.cpp"
+      "${SRC_DIR}/Communicator_Linux.cpp"
    )
 endif ()
 target_include_directories(${PROJECT_NAME}
