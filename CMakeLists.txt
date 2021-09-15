@@ -12,7 +12,7 @@ option(KONTROLLER_BUILD_EXAMPLES "Build the Kontroller example programs" OFF)
 
 # Library definition and features
 add_library(${PROJECT_NAME})
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # Source files
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Source")
@@ -20,13 +20,21 @@ set(INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Include")
 set(LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libraries")
 set(QUEUE_DIR "${LIB_DIR}/readerwriterqueue")
 target_sources(${PROJECT_NAME} PUBLIC
-   "${INC_DIR}/Kontroller/Kontroller.h"
+   "${INC_DIR}/Kontroller/Client.h"
+   "${INC_DIR}/Kontroller/Device.h"
+   "${INC_DIR}/Kontroller/Packet.h"
+   "${INC_DIR}/Kontroller/Server.h"
+   "${INC_DIR}/Kontroller/State.h"
    "${QUEUE_DIR}/atomicops.h"
    "${QUEUE_DIR}/readerwriterqueue.h"
 )
 target_sources(${PROJECT_NAME} PRIVATE
+   "${SRC_DIR}/Client.cpp"
    "${SRC_DIR}/Communicator.h"
-   "${SRC_DIR}/Kontroller.cpp"
+   "${SRC_DIR}/Device.cpp"
+   "${SRC_DIR}/Server.cpp"
+   "${SRC_DIR}/Sock.h"
+   "${SRC_DIR}/State.cpp"
 )
 if (APPLE)
    target_sources(${PROJECT_NAME} PRIVATE

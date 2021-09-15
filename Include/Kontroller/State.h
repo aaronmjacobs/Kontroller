@@ -1,18 +1,10 @@
 #pragma once
 
-#include <readerwriterqueue.h>
-
 #include <array>
-#include <condition_variable>
 #include <cstdint>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <thread>
 
-class Kontroller
+namespace Kontroller
 {
-public:
    enum class Button : uint8_t
    {
       None,
@@ -142,81 +134,11 @@ public:
       bool stop = false;
       bool play = false;
       bool record = false;
+
+      static State getOnlyNewButtons(const State& previous, const State& current);
+
+      bool* getButtonPointer(Button button);
+      float* getDialPointer(Dial dial);
+      float* getSliderPointer(Slider slider);
    };
-
-   class Communicator;
-
-   using ButtonCallback = std::function<void(Button, bool)>;
-   using DialCallback = std::function<void(Dial, float)>;
-   using SliderCallback = std::function<void(Slider, float)>;
-
-   Kontroller();
-   ~Kontroller();
-
-   bool isConnected() const
-   {
-      return communicatorConnected.load();
-   }
-
-   State getState() const;
-
-   void enableLEDControl(bool enable);
-   void setLEDOn(LED led, bool on);
-
-   void setButtonCallback(ButtonCallback callback);
-   void clearButtonCallback();
-
-   void setDialCallback(DialCallback callback);
-   void clearDialCallback();
-
-   void setSliderCallback(SliderCallback callback);
-   void clearSliderCallback();
-
-   static State getOnlyNewButtons(const State& previous, const State& current);
-
-private:
-   struct MidiMessage
-   {
-      uint8_t id = 0;
-      uint8_t value = 0;
-   };
-
-   struct MidiCommand
-   {
-      enum class Type : uint8_t
-      {
-         Control,
-         LED
-      };
-
-      Type type = Type::Control;
-      Kontroller::LED led = Kontroller::LED::None;
-      bool value = false;
-   };
-
-   void queueMessage(uint8_t id, uint8_t value);
-
-   void threadRun();
-   void processMessage(MidiMessage message);
-
-   static const char* const kDeviceName;
-
-   State state;
-   mutable std::mutex stateMutex;
-
-   std::thread thread;
-   std::condition_variable cv;
-   std::mutex eventMutex;
-   std::atomic_bool eventPending = {false};
-   std::atomic_bool shuttingDown = {false};
-
-   std::atomic_bool communicatorConnected = {false};
-
-   moodycamel::ReaderWriterQueue<MidiMessage> messageQueue;
-   moodycamel::ReaderWriterQueue<MidiCommand> commandQueue;
-
-   std::recursive_mutex callbackMutex;
-   ButtonCallback buttonCallback;
-   DialCallback dialCallback;
-   SliderCallback sliderCallback;
-};
+}

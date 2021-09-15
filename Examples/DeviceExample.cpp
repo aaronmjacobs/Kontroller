@@ -1,4 +1,7 @@
-#include "Kontroller/Kontroller.h"
+#include "Kontroller/Device.h"
+
+#include "Kontroller/Client.h"
+#include "Kontroller/Server.h"
 
 #include <cmath>
 #include <cstdio>
@@ -35,7 +38,7 @@ namespace
       return sqrtf(yDiff * yDiff + xDiff * xDiff);
    }
 
-   void doTheWave(Kontroller& kontroller)
+   void doTheWave(Kontroller::Device& device)
    {
       static const float kSpeed = 5.0f;
       static const float kDistance = 0.2f;
@@ -50,15 +53,15 @@ namespace
          bool m = y > 0.0f;
          bool r = y > -0.8f;
 
-         kontroller.setLEDOn(kGroupLEDs[i + 0], s);
-         kontroller.setLEDOn(kGroupLEDs[i + 1], m);
-         kontroller.setLEDOn(kGroupLEDs[i + 2], r);
+         device.setLEDOn(kGroupLEDs[i + 0], s);
+         device.setLEDOn(kGroupLEDs[i + 1], m);
+         device.setLEDOn(kGroupLEDs[i + 2], r);
       }
 
       time += kDeltaTime * kSpeed;
    }
 
-   void explode(Kontroller& kontroller)
+   void explode(Kontroller::Device& device)
    {
       static const float kSpeed = 30.0f;
 
@@ -74,7 +77,7 @@ namespace
          }
       }
 
-      Kontroller::State state = kontroller.getState();
+      Kontroller::State state = device.getState();
 
       static float radius = 0.0f;
       static Loc origin;
@@ -123,13 +126,13 @@ namespace
          float distance = dist(pair.second.x, pair.second.y, origin.x, origin.y);
          bool on = radius > 0.0f && fabsf(distance - radius) < 2.0f;
 
-         kontroller.setLEDOn(pair.first, on);
+         device.setLEDOn(pair.first, on);
       }
    }
 
-   void followSliders(Kontroller& kontroller)
+   void followSliders(Kontroller::Device& device)
    {
-      Kontroller::State state = kontroller.getState();
+      Kontroller::State state = device.getState();
 
       for (size_t i = 0; i < kGroupLEDs.size(); i += 3)
       {
@@ -140,13 +143,13 @@ namespace
          bool m = val > 0.5f;
          bool r = val > 0.25f;
 
-         kontroller.setLEDOn(kGroupLEDs[i + 0], s);
-         kontroller.setLEDOn(kGroupLEDs[i + 1], m);
-         kontroller.setLEDOn(kGroupLEDs[i + 2], r);
+         device.setLEDOn(kGroupLEDs[i + 0], s);
+         device.setLEDOn(kGroupLEDs[i + 1], m);
+         device.setLEDOn(kGroupLEDs[i + 2], r);
       }
    }
 
-   using DisplayFunc = void(*)(Kontroller&);
+   using DisplayFunc = void(*)(Kontroller::Device&);
 
    const std::array<DisplayFunc, 3> kDisplayFunctions
    {{
@@ -155,45 +158,45 @@ namespace
       followSliders
    }};
 
-   void clearLEDs(Kontroller& kontroller)
+   void clearLEDs(Kontroller::Device& device)
    {
       for (Kontroller::LED led : kGroupLEDs)
       {
-         kontroller.setLEDOn(led, false);
+         device.setLEDOn(led, false);
       }
    }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-   Kontroller kontroller;
+   Kontroller::Device device;
 
-   kontroller.setButtonCallback([](Kontroller::Button button, bool pressed)
+   device.setButtonCallback([](Kontroller::Button button, bool pressed)
    {
       printf("%d pressed: %d\n", static_cast<int>(button), pressed);
    });
 
-   kontroller.setDialCallback([](Kontroller::Dial dial, float value)
+   device.setDialCallback([](Kontroller::Dial dial, float value)
    {
       printf("%d dial val: %f\n", static_cast<int>(dial), value);
    });
 
-   kontroller.setSliderCallback([](Kontroller::Slider slider, float value)
+   device.setSliderCallback([](Kontroller::Slider slider, float value)
    {
       printf("%d slider val: %f\n", static_cast<int>(slider), value);
    });
 
-   Kontroller::State state = kontroller.getState();
+   Kontroller::State state = device.getState();
    Kontroller::State current = state;
    Kontroller::State previous = state;
    size_t displayFuncIndex = 0;
 
    bool controlEnabled = false;
-   kontroller.enableLEDControl(controlEnabled);
+   device.enableLEDControl(controlEnabled);
 
    while (!state.stop)
    {
-      if (kontroller.isConnected())
+      if (device.isConnected())
       {
          if (state.cycle)
          {
@@ -201,10 +204,10 @@ int main(int argc, char *argv[])
 
             if (!controlEnabled)
             {
-               clearLEDs(kontroller);
+               clearLEDs(device);
             }
 
-            kontroller.enableLEDControl(controlEnabled);
+            device.enableLEDControl(controlEnabled);
          }
 
          if (state.trackNext)
@@ -218,19 +221,19 @@ int main(int argc, char *argv[])
 
          if (controlEnabled)
          {
-            kDisplayFunctions[displayFuncIndex](kontroller);
+            kDisplayFunctions[displayFuncIndex](device);
          }
       }
 
       std::this_thread::sleep_for(std::chrono::milliseconds(kSleepMillis));
 
       previous = current;
-      current = kontroller.getState();
-      state = Kontroller::getOnlyNewButtons(previous, current);
+      current = device.getState();
+      state = Kontroller::State::getOnlyNewButtons(previous, current);
    }
 
-   clearLEDs(kontroller);
-   kontroller.enableLEDControl(false);
+   clearLEDs(device);
+   device.enableLEDControl(false);
 
    return 0;
 }
