@@ -8,6 +8,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 endif ()
 
 # Build options
+option(KONTROLLER_BUILD_SERVICE "Build the Kontroller service" OFF)
 option(KONTROLLER_BUILD_EXAMPLES "Build the Kontroller example programs" OFF)
 
 # Library definition and features
@@ -56,10 +57,6 @@ target_include_directories(${PROJECT_NAME}
 get_target_property(SOURCE_FILES ${PROJECT_NAME} SOURCES)
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCE_FILES})
 
-if (KONTROLLER_BUILD_EXAMPLES)
-   add_subdirectory("Examples")
-endif()
-
 # Platform-specific dependencies
 if (APPLE)
    find_library(COREMIDI_LIBRARY CoreMidi)
@@ -69,3 +66,11 @@ elseif (WIN32)
    target_link_libraries(${PROJECT_NAME} PUBLIC "winmm")
 elseif (LINUX)
 endif ()
+
+if (KONTROLLER_BUILD_SERVICE)
+   add_subdirectory("Service")
+endif ()
+
+if (KONTROLLER_BUILD_EXAMPLES)
+   add_subdirectory("Examples")
+endif()
