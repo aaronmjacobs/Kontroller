@@ -106,6 +106,11 @@ namespace Kontroller
       Group8Record
    };
 
+   extern const char* getName(Button button);
+   extern const char* getName(Dial dial);
+   extern const char* getName(Slider slider);
+   extern const char* getName(LED led);
+
    struct Group
    {
       float dial = 0.0f;

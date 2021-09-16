@@ -173,17 +173,17 @@ int main(int argc, char* argv[])
 
    device.setButtonCallback([](Kontroller::Button button, bool pressed)
    {
-      printf("%d pressed: %d\n", static_cast<int>(button), pressed);
+      printf("%s %s\n", Kontroller::getName(button), pressed ? "pressed" : "released");
    });
 
    device.setDialCallback([](Kontroller::Dial dial, float value)
    {
-      printf("%d dial val: %f\n", static_cast<int>(dial), value);
+      printf("%s dial value: %f\n", Kontroller::getName(dial), value);
    });
 
    device.setSliderCallback([](Kontroller::Slider slider, float value)
    {
-      printf("%d slider val: %f\n", static_cast<int>(slider), value);
+      printf("%s slider value: %f\n", Kontroller::getName(slider), value);
    });
 
    Kontroller::State state = device.getState();

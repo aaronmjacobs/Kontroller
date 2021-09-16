@@ -6,17 +6,17 @@ int main(int argc, char* argv[])
 
    client.setButtonCallback([](Kontroller::Button button, bool pressed)
    {
-      printf("%d pressed: %d\n", static_cast<int>(button), pressed);
+      printf("%s %s\n", Kontroller::getName(button), pressed ? "pressed" : "released");
    });
 
    client.setDialCallback([](Kontroller::Dial dial, float value)
    {
-      printf("%d dial val: %f\n", static_cast<int>(dial), value);
+      printf("%s dial value: %f\n", Kontroller::getName(dial), value);
    });
 
    client.setSliderCallback([](Kontroller::Slider slider, float value)
    {
-      printf("%d slider val: %f\n", static_cast<int>(slider), value);
+      printf("%s slider value: %f\n", Kontroller::getName(slider), value);
    });
 
    while (!client.getState().stop)
