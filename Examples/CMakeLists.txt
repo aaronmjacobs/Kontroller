@@ -7,5 +7,8 @@ target_link_libraries("KontrollerExample-Client" PRIVATE Kontroller)
 add_executable("KontrollerExample-Device" "DeviceExample.cpp")
 target_link_libraries("KontrollerExample-Device" PRIVATE Kontroller)
 
+add_executable("KontrollerExample-Pong" "PongExample.cpp")
+target_link_libraries("KontrollerExample-Pong" PRIVATE Kontroller)
+
 add_executable("KontrollerExample-Server" "ServerExample.cpp")
 target_link_libraries("KontrollerExample-Server" PRIVATE Kontroller)
