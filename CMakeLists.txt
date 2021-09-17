@@ -13,14 +13,14 @@ option(KONTROLLER_BUILD_EXAMPLES "Build the Kontroller example programs" OFF)
 
 # Library definition and features
 add_library(${PROJECT_NAME})
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 # Source files
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Source")
 set(INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Include")
 set(LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libraries")
 set(QUEUE_DIR "${LIB_DIR}/readerwriterqueue")
-target_sources(${PROJECT_NAME} PUBLIC
+target_sources(${PROJECT_NAME} PRIVATE
    "${INC_DIR}/Kontroller/Client.h"
    "${INC_DIR}/Kontroller/Device.h"
    "${INC_DIR}/Kontroller/Packet.h"
