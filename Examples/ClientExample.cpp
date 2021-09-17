@@ -2,7 +2,8 @@
 
 int main(int argc, char* argv[])
 {
-   Kontroller::Client client;
+   const char* endpoint = argc > 1 ? argv[1] : "127.0.0.1";
+   Kontroller::Client client(endpoint);
 
    client.setButtonCallback([](Kontroller::Button button, bool pressed)
    {
