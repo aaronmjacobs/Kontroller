@@ -90,7 +90,7 @@ namespace Kontroller
          implData->readThread = std::thread([this]() { readThreadRun(*this, implData->midiFileDescriptor, implData->pipeReadDescriptor, implData->shuttingDown); });
       }
 
-      return false;
+      return isConnected();
    }
 
    void Device::Communicator::disconnect()
