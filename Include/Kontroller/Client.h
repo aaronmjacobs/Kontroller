@@ -14,7 +14,7 @@ namespace Kontroller
    class Client
    {
    public:
-      Client(const char* endpoint = "127.0.0.1");
+      Client(const char* endpoint = "127.0.0.1", bool printErrorMessages = false);
       ~Client();
 
       State getState() const;
@@ -40,6 +40,8 @@ namespace Kontroller
    private:
       void run(const char* endpoint);
       void updateState(const EventPacket& packet);
+
+      const bool printErrors = false;
 
       State state;
       mutable std::mutex stateMutex;
