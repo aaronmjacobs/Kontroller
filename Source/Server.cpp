@@ -289,8 +289,9 @@ namespace Kontroller
       }
    }
 
-   Server::Server(bool printErrorMessages /*= false*/)
-      : printErrors(printErrorMessages)
+   Server::Server(int timeoutMilliseconds /*= 100*/, bool printErrorMessages /*= false*/)
+      : timeoutMS(timeoutMilliseconds)
+      , printErrors(printErrorMessages)
    {
       listenThread = std::thread([this]() { listen(); });
    }
@@ -325,7 +326,7 @@ namespace Kontroller
                fprintf(stderr, "Kontroller::Server - socket system startup failed with error: %d\n", initializeResult);
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(timeoutMS));
          }
       }
 
@@ -336,7 +337,7 @@ namespace Kontroller
 
          if (listenSocket == Sock::kInvalidSocket)
          {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(timeoutMS));
          }
       }
 
@@ -352,7 +353,7 @@ namespace Kontroller
             pollfd pollData = {};
             pollData.fd = listenSocket;
             pollData.events = POLLRDNORM;
-            int pollResult = Sock::poll(&pollData, 1, 100); // 100ms timeout
+            int pollResult = Sock::poll(&pollData, 1, timeoutMS);
 
             if (pollResult > 0 && (pollData.revents & POLLRDNORM) != 0 && !shuttingDown.load())
             {

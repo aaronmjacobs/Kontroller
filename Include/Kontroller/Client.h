@@ -14,7 +14,7 @@ namespace Kontroller
    class Client
    {
    public:
-      Client(const char* endpoint = "127.0.0.1", bool printErrorMessages = false);
+      Client(const char* endpoint = "127.0.0.1", int timeoutMilliseconds = 100, int retryMilliseconds = 1000, bool printErrorMessages = false);
       ~Client();
 
       State getState() const;
@@ -41,6 +41,8 @@ namespace Kontroller
       void run(const char* endpoint);
       void updateState(const EventPacket& packet);
 
+      const int timeoutMS = 100;
+      const int retryMS = 1000;
       const bool printErrors = false;
 
       State state;

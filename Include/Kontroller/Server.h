@@ -20,7 +20,7 @@ namespace Kontroller
    class Server
    {
    public:
-      Server(bool printErrorMessages = false);
+      Server(int timeoutMilliseconds = 100, bool printErrorMessages = false);
       ~Server();
 
       State getState() const;
@@ -93,6 +93,7 @@ namespace Kontroller
       void setCallbacks(Device& device);
       void updateState(Device& device);
 
+      const int timeoutMS = 100;
       const bool printErrors = false;
 
       State state;

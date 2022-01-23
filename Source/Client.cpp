@@ -17,15 +17,13 @@ namespace Kontroller
          Timeout
       };
 
-      SocketResult poll(Sock::Socket socket, bool printErrors)
+      SocketResult poll(Sock::Socket socket, int timeoutMS, bool printErrors)
       {
-         static const int kTimeoutMilliseconds = 100;
-
          pollfd pollData = {};
          pollData.fd = socket;
          pollData.events = POLLRDNORM;
 
-         int numSet = Sock::poll(&pollData, 1, kTimeoutMilliseconds);
+         int numSet = Sock::poll(&pollData, 1, timeoutMS);
 
          if (numSet < 0)
          {
@@ -53,7 +51,7 @@ namespace Kontroller
          return SocketResult::Success;
       }
 
-      Sock::Socket connect(const char* endpoint, bool printErrors)
+      Sock::Socket connect(const char* endpoint, int timeoutMS, bool printErrors)
       {
          Sock::Socket socket = Sock::kInvalidSocket;
          addrinfo* addrInfo = nullptr;
@@ -112,7 +110,7 @@ namespace Kontroller
             }
 
             // Poll to make sure a connection has successfully been made
-            SocketResult pollResult = poll(socket, printErrors);
+            SocketResult pollResult = poll(socket, timeoutMS, printErrors);
             if (pollResult != SocketResult::Success)
             {
                break;
@@ -160,10 +158,10 @@ namespace Kontroller
          return true;
       }
 
-      SocketResult receivePacket(Sock::Socket socket, EventPacket& packet, bool printErrors)
+      SocketResult receivePacket(Sock::Socket socket, EventPacket& packet, int timeoutMS, bool printErrors)
       {
          // Wait (with timeout) until there is data available
-         SocketResult pollResult = poll(socket, printErrors);
+         SocketResult pollResult = poll(socket, timeoutMS, printErrors);
          if (pollResult != SocketResult::Success)
          {
             return pollResult;
@@ -205,8 +203,10 @@ namespace Kontroller
       }
    }
 
-   Client::Client(const char* endpoint /*= "127.0.0.1"*/, bool printErrorMessages /*= false*/)
-      : printErrors(printErrorMessages)
+   Client::Client(const char* endpoint /*= "127.0.0.1"*/, int timeoutMilliseconds /*= 100*/, int retryMilliseconds /*= 1000*/, bool printErrorMessages /*= false*/)
+      : timeoutMS(timeoutMilliseconds)
+      , retryMS(retryMilliseconds)
+      , printErrors(printErrorMessages)
    {
       thread = std::thread([this, endpointString = std::string(endpoint)]() { run(endpointString.c_str()); });
    }
@@ -274,11 +274,11 @@ namespace Kontroller
 
       while (!shuttingDown.load())
       {
-         Sock::Socket socket = connect(endpoint, printErrors);
+         Sock::Socket socket = connect(endpoint, timeoutMS, printErrors);
          if (socket == Sock::kInvalidSocket)
          {
             std::unique_lock<std::mutex> lock(shutDownMutex);
-            cv.wait_for(lock, std::chrono::milliseconds(1000), [this]
+            cv.wait_for(lock, std::chrono::milliseconds(retryMS), [this]
             {
                return shuttingDown.load();
             });
@@ -291,7 +291,7 @@ namespace Kontroller
          while (!shuttingDown.load())
          {
             EventPacket packet;
-            SocketResult result = receivePacket(socket, packet, printErrors);
+            SocketResult result = receivePacket(socket, packet, timeoutMS, printErrors);
 
             if (result == SocketResult::Success)
             {
