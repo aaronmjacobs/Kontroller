@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[])
 {
-   Kontroller::Server server(100, true);
+   Kontroller::Server server(100, 1000, true);
 
    while (!server.getState().stop)
    {

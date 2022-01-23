@@ -9,7 +9,6 @@
 #include <cstdio>
 #include <cstring>
 #include <optional>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -289,8 +288,9 @@ namespace Kontroller
       }
    }
 
-   Server::Server(int timeoutMilliseconds /*= 100*/, bool printErrorMessages /*= false*/)
+   Server::Server(int timeoutMilliseconds /*= 100*/, int retryMilliseconds /*= 1000*/, bool printErrorMessages /*= false*/)
       : timeoutMS(timeoutMilliseconds)
+      , retryMS(retryMilliseconds)
       , printErrors(printErrorMessages)
    {
       listenThread = std::thread([this]() { listen(); });
@@ -302,7 +302,7 @@ namespace Kontroller
          std::lock_guard<std::mutex> lock(shutDownMutex);
          shuttingDown.store(true);
       }
-
+      cv.notify_all();
       listenThread.join();
    }
 
@@ -326,7 +326,11 @@ namespace Kontroller
                fprintf(stderr, "Kontroller::Server - socket system startup failed with error: %d\n", initializeResult);
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(timeoutMS));
+            std::unique_lock<std::mutex> lock(shutDownMutex);
+            cv.wait_for(lock, std::chrono::milliseconds(retryMS), [this]
+            {
+               return shuttingDown.load();
+            });
          }
       }
 
@@ -337,7 +341,11 @@ namespace Kontroller
 
          if (listenSocket == Sock::kInvalidSocket)
          {
-            std::this_thread::sleep_for(std::chrono::milliseconds(timeoutMS));
+            std::unique_lock<std::mutex> lock(shutDownMutex);
+            cv.wait_for(lock, std::chrono::milliseconds(retryMS), [this]
+            {
+               return shuttingDown.load();
+            });
          }
       }
 

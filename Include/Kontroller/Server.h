@@ -20,7 +20,7 @@ namespace Kontroller
    class Server
    {
    public:
-      Server(int timeoutMilliseconds = 100, bool printErrorMessages = false);
+      Server(int timeoutMilliseconds = 100, int retryMilliseconds = 1000, bool printErrorMessages = false);
       ~Server();
 
       State getState() const;
@@ -94,11 +94,13 @@ namespace Kontroller
       void updateState(Device& device);
 
       const int timeoutMS = 100;
+      const int retryMS = 1000;
       const bool printErrors = false;
 
       State state;
       mutable std::mutex stateMutex;
 
+      std::condition_variable cv;
       std::mutex shutDownMutex;
       std::atomic_bool shuttingDown = { false };
 
