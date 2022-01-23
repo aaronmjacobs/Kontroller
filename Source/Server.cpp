@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 #include <optional>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -312,60 +313,71 @@ namespace Kontroller
 
    void Server::listen()
    {
-      int initializeResult = Sock::System::initialize();
-      if (initializeResult != 0)
+      int initializeResult = -1;
+      while (initializeResult != 0 && !shuttingDown.load())
       {
-         if (printErrors)
+         initializeResult = Sock::System::initialize();
+
+         if (initializeResult != 0)
          {
-            fprintf(stderr, "Kontroller::Server - socket system startup failed with error: %d\n", initializeResult);
-         }
-         return;
-      }
-
-      Sock::Socket listenSocket = createListenSocket(printErrors);
-      if (listenSocket == Sock::kInvalidSocket)
-      {
-         return;
-      }
-
-      Device device;
-      setCallbacks(device);
-
-      while (!shuttingDown.load())
-      {
-         // Wait until there is a socket ready to be accepted
-         pollfd pollData = {};
-         pollData.fd = listenSocket;
-         pollData.events = POLLRDNORM;
-         int pollResult = Sock::poll(&pollData, 1, 100); // 100ms timeout
-
-         if (pollResult > 0 && (pollData.revents & POLLRDNORM) != 0 && !shuttingDown.load())
-         {
-            Sock::Socket clientSocket = Sock::accept(listenSocket, nullptr, nullptr);
-            if (clientSocket == Sock::kInvalidSocket)
+            if (printErrors)
             {
-               if (printErrors)
+               fprintf(stderr, "Kontroller::Server - socket system startup failed with error: %d\n", initializeResult);
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+         }
+      }
+
+      Sock::Socket listenSocket = Sock::kInvalidSocket;
+      while (listenSocket == Sock::kInvalidSocket && !shuttingDown.load())
+      {
+         listenSocket = createListenSocket(printErrors);
+
+         if (listenSocket == Sock::kInvalidSocket)
+         {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+         }
+      }
+
+      if (!shuttingDown.load())
+      {
+         Device device;
+         setCallbacks(device);
+
+         listening.store(true);
+         while (!shuttingDown.load())
+         {
+            // Wait until there is a socket ready to be accepted
+            pollfd pollData = {};
+            pollData.fd = listenSocket;
+            pollData.events = POLLRDNORM;
+            int pollResult = Sock::poll(&pollData, 1, 100); // 100ms timeout
+
+            if (pollResult > 0 && (pollData.revents & POLLRDNORM) != 0 && !shuttingDown.load())
+            {
+               Sock::Socket clientSocket = Sock::accept(listenSocket, nullptr, nullptr);
+               if (clientSocket == Sock::kInvalidSocket)
                {
-                  fprintf(stderr, "Kontroller::Server - accept failed with error: %d\n", Sock::System::getLastError());
+                  if (printErrors)
+                  {
+                     fprintf(stderr, "Kontroller::Server - accept failed with error: %d\n", Sock::System::getLastError());
+                  }
+               }
+               else
+               {
+                  std::lock_guard<std::mutex> lock(threadDataMutex);
+
+                  ThreadData* data = threadData.emplace_back(std::make_unique<ThreadData>()).get();
+                  data->encodedSocket = encodeSocket(clientSocket);
+                  data->thread = std::thread([this, data]() { manageConnection(data); });
                }
             }
-            else
-            {
-               std::lock_guard<std::mutex> lock(threadDataMutex);
 
-               ThreadData* data = threadData.emplace_back(std::make_unique<ThreadData>()).get();
-               data->encodedSocket = encodeSocket(clientSocket);
-               data->thread = std::thread([this, data]() { manageConnection(data); });
-            }
+            pruneThreads();
          }
-
-         pruneThreads();
+         listening.store(false);
       }
-
-      clearCallbacks(device);
-
-      Sock::shutdown(listenSocket, Sock::ShutdownMethod::ReadWrite);
-      Sock::close(listenSocket);
 
       {
          std::unique_lock<std::mutex> lock(threadDataMutex);
@@ -385,7 +397,16 @@ namespace Kontroller
          }
       }
 
-      Sock::System::terminate();
+      if (listenSocket != Sock::kInvalidSocket)
+      {
+         Sock::shutdown(listenSocket, Sock::ShutdownMethod::ReadWrite);
+         Sock::close(listenSocket);
+      }
+
+      if (initializeResult == 0)
+      {
+         Sock::System::terminate();
+      }
    }
 
    void Server::manageConnection(ThreadData* data)
@@ -520,13 +541,6 @@ namespace Kontroller
             }
          }
       });
-   }
-
-   void Server::clearCallbacks(Device& device)
-   {
-      device.clearButtonCallback();
-      device.clearDialCallback();
-      device.clearSliderCallback();
    }
 
    void Server::updateState(Device& device)

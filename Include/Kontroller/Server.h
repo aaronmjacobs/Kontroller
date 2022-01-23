@@ -25,6 +25,11 @@ namespace Kontroller
 
       State getState() const;
 
+      bool isListening() const
+      {
+         return listening.load();
+      }
+
       struct ButtonEvent
       {
          Button button = Button::None;
@@ -86,8 +91,6 @@ namespace Kontroller
       void pruneThreads();
 
       void setCallbacks(Device& device);
-      void clearCallbacks(Device& device);
-
       void updateState(Device& device);
 
       const bool printErrors = false;
@@ -99,6 +102,7 @@ namespace Kontroller
       std::atomic_bool shuttingDown = { false };
 
       std::thread listenThread;
+      std::atomic_bool listening = { false };
 
       std::vector<std::unique_ptr<ThreadData>> threadData;
       std::mutex threadDataMutex;
