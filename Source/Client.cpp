@@ -262,14 +262,24 @@ namespace Kontroller
 
    void Client::run(const char* endpoint)
    {
-      int initializeResult = Sock::System::initialize();
-      if (initializeResult != 0)
+      int initializeResult = -1;
+      while (initializeResult != 0 && !shuttingDown.load())
       {
-         if (printErrors)
+         initializeResult = Sock::System::initialize();
+
+         if (initializeResult != 0)
          {
-            fprintf(stderr, "Kontroller::Client - socket system startup failed with error: %d\n", initializeResult);
+            if (printErrors)
+            {
+               fprintf(stderr, "Kontroller::Client - socket system startup failed with error: %d\n", initializeResult);
+            }
+
+            std::unique_lock<std::mutex> lock(shutDownMutex);
+            cv.wait_for(lock, std::chrono::milliseconds(retryMS), [this]
+            {
+               return shuttingDown.load();
+            });
          }
-         return;
       }
 
       while (!shuttingDown.load())
@@ -303,13 +313,16 @@ namespace Kontroller
             }
          }
 
+         connected.store(false);
+
          Sock::shutdown(socket, Sock::ShutdownMethod::ReadWrite);
          Sock::close(socket);
-
-         connected.store(false);
       }
 
-      Sock::System::terminate();
+      if (initializeResult == 0)
+      {
+         Sock::System::terminate();
+      }
    }
 
    void Client::updateState(const EventPacket& packet)
