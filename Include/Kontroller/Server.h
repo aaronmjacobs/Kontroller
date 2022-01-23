@@ -20,7 +20,7 @@ namespace Kontroller
    class Server
    {
    public:
-      Server();
+      Server(bool printErrorMessages = false);
       ~Server();
 
       State getState() const;
@@ -89,6 +89,8 @@ namespace Kontroller
       void clearCallbacks(Device& device);
 
       void updateState(Device& device);
+
+      const bool printErrors = false;
 
       State state;
       mutable std::mutex stateMutex;

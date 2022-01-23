@@ -16,7 +16,7 @@ namespace Kontroller
 {
    namespace
    {
-      Sock::Socket createListenSocket()
+      Sock::Socket createListenSocket(bool printErrors)
       {
          Sock::Socket listenSocket = Sock::kInvalidSocket;
          addrinfo* addrInfo = nullptr;
@@ -33,14 +33,20 @@ namespace Kontroller
             int addrInfoResult = Sock::getaddrinfo(nullptr, kPort, &hints, &addrInfo);
             if (addrInfoResult != 0 || !addrInfo)
             {
-               fprintf(stderr, "getaddrinfo failed with error: %d\n", addrInfoResult);
+               if (printErrors)
+               {
+                  fprintf(stderr, "Kontroller::Server - getaddrinfo failed with error: %d\n", addrInfoResult);
+               }
                break;
             }
 
             listenSocket = Sock::socket(addrInfo->ai_family, addrInfo->ai_socktype, addrInfo->ai_protocol);
             if (listenSocket == Sock::kInvalidSocket)
             {
-               fprintf(stderr, "socket failed with error: %d\n", Sock::System::getLastError());
+               if (printErrors)
+               {
+                  fprintf(stderr, "Kontroller::Server - socket failed with error: %d\n", Sock::System::getLastError());
+               }
                break;
             }
 
@@ -48,21 +54,30 @@ namespace Kontroller
             int ioctrlResult = Sock::ioctl(listenSocket, FIONBIO, &nonBlocking);
             if (ioctrlResult == Sock::kSocketError)
             {
-               fprintf(stderr, "ioctl failed with error: %d\n", Sock::System::getLastError());
+               if (printErrors)
+               {
+                  fprintf(stderr, "Kontroller::Server - ioctl failed with error: %d\n", Sock::System::getLastError());
+               }
                break;
             }
 
             int bindResult = Sock::bind(listenSocket, addrInfo->ai_addr, static_cast<socklen_t>(addrInfo->ai_addrlen));
             if (bindResult == Sock::kSocketError)
             {
-               fprintf(stderr, "bind failed with error: %d\n", Sock::System::getLastError());
+               if (printErrors)
+               {
+                  fprintf(stderr, "Kontroller::Server - bind failed with error: %d\n", Sock::System::getLastError());
+               }
                break;
             }
 
             int listenResult = Sock::listen(listenSocket, SOMAXCONN);
             if (listenResult == Sock::kSocketError)
             {
-               fprintf(stderr, "listen failed with error: %d\n", Sock::System::getLastError());
+               if (printErrors)
+               {
+                  fprintf(stderr, "Kontroller::Server - listen failed with error: %d\n", Sock::System::getLastError());
+               }
                break;
             }
 
@@ -273,7 +288,8 @@ namespace Kontroller
       }
    }
 
-   Server::Server()
+   Server::Server(bool printErrorMessages /*= false*/)
+      : printErrors(printErrorMessages)
    {
       listenThread = std::thread([this]() { listen(); });
    }
@@ -299,11 +315,14 @@ namespace Kontroller
       int initializeResult = Sock::System::initialize();
       if (initializeResult != 0)
       {
-         fprintf(stderr, "Socket system startup failed with error: %d\n", initializeResult);
+         if (printErrors)
+         {
+            fprintf(stderr, "Kontroller::Server - socket system startup failed with error: %d\n", initializeResult);
+         }
          return;
       }
 
-      Sock::Socket listenSocket = createListenSocket();
+      Sock::Socket listenSocket = createListenSocket(printErrors);
       if (listenSocket == Sock::kInvalidSocket)
       {
          return;
@@ -325,8 +344,10 @@ namespace Kontroller
             Sock::Socket clientSocket = Sock::accept(listenSocket, nullptr, nullptr);
             if (clientSocket == Sock::kInvalidSocket)
             {
-               int error = Sock::System::getLastError();
-               fprintf(stderr, "accept failed with error: %d\n", error);
+               if (printErrors)
+               {
+                  fprintf(stderr, "Kontroller::Server - accept failed with error: %d\n", Sock::System::getLastError());
+               }
             }
             else
             {
@@ -375,9 +396,9 @@ namespace Kontroller
 
       int tcpNoDelay = 1;
       int optResult = Sock::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &tcpNoDelay, sizeof(tcpNoDelay));
-      if (optResult == Sock::kSocketError)
+      if (optResult == Sock::kSocketError && printErrors)
       {
-         fprintf(stderr, "Unable to disable the Nagle algorithm, connection may be jittery!\n");
+         fprintf(stderr, "Kontroller::Server - unable to disable the Nagle algorithm, connection may be jittery!\n");
       }
 
       if (sendInitialEvents(socket, getState()))
