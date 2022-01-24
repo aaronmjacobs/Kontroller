@@ -293,7 +293,7 @@ namespace Kontroller
       , retryMS(retryMilliseconds)
       , printErrors(printErrorMessages)
    {
-      listenThread = std::thread([this]() { listen(); });
+      listenThread = std::thread([this]() { run(); });
    }
 
    Server::~Server()
@@ -312,7 +312,7 @@ namespace Kontroller
       return state;
    }
 
-   void Server::listen()
+   void Server::run()
    {
       int initializeResult = -1;
       while (initializeResult != 0 && !shuttingDown.load())
@@ -334,58 +334,15 @@ namespace Kontroller
          }
       }
 
-      Sock::Socket listenSocket = Sock::kInvalidSocket;
-      while (listenSocket == Sock::kInvalidSocket && !shuttingDown.load())
-      {
-         listenSocket = createListenSocket(printErrors);
-
-         if (listenSocket == Sock::kInvalidSocket)
-         {
-            std::unique_lock<std::mutex> lock(shutDownMutex);
-            cv.wait_for(lock, std::chrono::milliseconds(retryMS), [this]
-            {
-               return shuttingDown.load();
-            });
-         }
-      }
-
       if (!shuttingDown.load())
       {
          Device device;
          setCallbacks(device);
 
-         listening.store(true);
          while (!shuttingDown.load())
          {
-            // Wait until there is a socket ready to be accepted
-            pollfd pollData = {};
-            pollData.fd = listenSocket;
-            pollData.events = POLLRDNORM;
-            int pollResult = Sock::poll(&pollData, 1, timeoutMS);
-
-            if (pollResult > 0 && (pollData.revents & POLLRDNORM) != 0 && !shuttingDown.load())
-            {
-               Sock::Socket clientSocket = Sock::accept(listenSocket, nullptr, nullptr);
-               if (clientSocket == Sock::kInvalidSocket)
-               {
-                  if (printErrors)
-                  {
-                     fprintf(stderr, "Kontroller::Server - accept failed with error: %d\n", Sock::System::getLastError());
-                  }
-               }
-               else
-               {
-                  std::lock_guard<std::mutex> lock(threadDataMutex);
-
-                  ThreadData* data = threadData.emplace_back(std::make_unique<ThreadData>()).get();
-                  data->encodedSocket = encodeSocket(clientSocket);
-                  data->thread = std::thread([this, data]() { manageConnection(data); });
-               }
-            }
-
-            pruneThreads();
+            listen();
          }
-         listening.store(false);
       }
 
       {
@@ -406,15 +363,73 @@ namespace Kontroller
          }
       }
 
+      if (initializeResult == 0)
+      {
+         Sock::System::terminate();
+      }
+   }
+
+   void Server::listen()
+   {
+      Sock::Socket listenSocket = Sock::kInvalidSocket;
+      while (listenSocket == Sock::kInvalidSocket && !shuttingDown.load())
+      {
+         listenSocket = createListenSocket(printErrors);
+
+         if (listenSocket == Sock::kInvalidSocket)
+         {
+            std::unique_lock<std::mutex> lock(shutDownMutex);
+            cv.wait_for(lock, std::chrono::milliseconds(retryMS), [this]
+            {
+               return shuttingDown.load();
+            });
+         }
+      }
+
+      if (listenSocket != Sock::kInvalidSocket)
+      {
+         listening.store(true);
+      }
+
+      while (!shuttingDown.load())
+      {
+         // Wait until there is a socket ready to be accepted
+         Sock::Result pollResult = Sock::Helpers::poll(listenSocket, POLLRDNORM, timeoutMS, "Kontroller::Server", printErrors);
+
+         if (pollResult == Sock::Result::Success && !shuttingDown.load())
+         {
+            Sock::Socket clientSocket = Sock::accept(listenSocket, nullptr, nullptr);
+            if (clientSocket != Sock::kInvalidSocket)
+            {
+               std::lock_guard<std::mutex> lock(threadDataMutex);
+
+               ThreadData* data = threadData.emplace_back(std::make_unique<ThreadData>()).get();
+               data->encodedSocket = encodeSocket(clientSocket);
+               data->thread = std::thread([this, data]() { manageConnection(data); });
+            }
+            else
+            {
+               if (printErrors)
+               {
+                  fprintf(stderr, "Kontroller::Server - accept failed with error: %d\n", Sock::System::getLastError());
+               }
+               break;
+            }
+         }
+         else if (pollResult == Sock::Result::Error)
+         {
+            break;
+         }
+
+         pruneThreads();
+      }
+
+      listening.store(false);
+
       if (listenSocket != Sock::kInvalidSocket)
       {
          Sock::shutdown(listenSocket, Sock::ShutdownMethod::ReadWrite);
          Sock::close(listenSocket);
-      }
-
-      if (initializeResult == 0)
-      {
-         Sock::System::terminate();
       }
    }
 

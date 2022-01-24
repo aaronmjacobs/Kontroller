@@ -34,6 +34,13 @@ namespace Kontroller
    {
       constexpr int kSocketError = -1;
 
+      enum class Result
+      {
+         Success,
+         Error,
+         Timeout
+      };
+
 #if SOCK_WINDOWS
       using Command = long;
       using Length = int;
@@ -272,6 +279,11 @@ namespace Kontroller
       inline Socket socket(int domain, int type, int protocol)
       {
          return ::socket(domain, type, protocol);
+      }
+
+      namespace Helpers
+      {
+         Result poll(Socket socket, short events, int timeoutMS, const char* caller = nullptr, bool printErrors = false);
       }
    }
 }

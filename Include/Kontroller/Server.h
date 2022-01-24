@@ -86,6 +86,7 @@ namespace Kontroller
          }
       };
 
+      void run();
       void listen();
       void manageConnection(ThreadData* data);
       void pruneThreads();

@@ -34,6 +34,7 @@ target_sources(${PROJECT_NAME} PRIVATE
    "${SRC_DIR}/Communicator.h"
    "${SRC_DIR}/Device.cpp"
    "${SRC_DIR}/Server.cpp"
+   "${SRC_DIR}/Sock.cpp"
    "${SRC_DIR}/Sock.h"
    "${SRC_DIR}/State.cpp"
 )

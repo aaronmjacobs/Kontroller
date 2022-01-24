@@ -10,47 +10,6 @@ namespace Kontroller
 {
    namespace
    {
-      enum class SocketResult
-      {
-         Success,
-         Error,
-         Timeout
-      };
-
-      SocketResult poll(Sock::Socket socket, int timeoutMS, bool printErrors)
-      {
-         pollfd pollData = {};
-         pollData.fd = socket;
-         pollData.events = POLLRDNORM;
-
-         int numSet = Sock::poll(&pollData, 1, timeoutMS);
-
-         if (numSet < 0)
-         {
-            if (printErrors)
-            {
-               fprintf(stderr, "Kontroller::Client - poll failed with error: %d\n", Sock::System::getLastError());
-            }
-            return SocketResult::Error;
-         }
-
-         if (numSet == 0)
-         {
-            return SocketResult::Timeout;
-         }
-
-         if (!(pollData.revents & pollData.events) || (pollData.revents & (POLLERR | POLLHUP | POLLNVAL)))
-         {
-            if (printErrors)
-            {
-               fprintf(stderr, "Kontroller::Client - poll failed with events: 0x%X\n", pollData.revents);
-            }
-            return SocketResult::Error;
-         }
-
-         return SocketResult::Success;
-      }
-
       Sock::Socket connect(const char* endpoint, int timeoutMS, bool printErrors)
       {
          Sock::Socket socket = Sock::kInvalidSocket;
@@ -110,8 +69,8 @@ namespace Kontroller
             }
 
             // Poll to make sure a connection has successfully been made
-            SocketResult pollResult = poll(socket, timeoutMS, printErrors);
-            if (pollResult != SocketResult::Success)
+            Sock::Result pollResult = Sock::Helpers::poll(socket, POLLRDNORM, timeoutMS, "Kontroller::Client", printErrors);
+            if (pollResult != Sock::Result::Success)
             {
                break;
             }
@@ -158,11 +117,11 @@ namespace Kontroller
          return true;
       }
 
-      SocketResult receivePacket(Sock::Socket socket, EventPacket& packet, int timeoutMS, bool printErrors)
+      Sock::Result receivePacket(Sock::Socket socket, EventPacket& packet, int timeoutMS, bool printErrors)
       {
          // Wait (with timeout) until there is data available
-         SocketResult pollResult = poll(socket, timeoutMS, printErrors);
-         if (pollResult != SocketResult::Success)
+         Sock::Result pollResult = Sock::Helpers::poll(socket, POLLRDNORM, timeoutMS, "Kontroller::Client", printErrors);
+         if (pollResult != Sock::Result::Success)
          {
             return pollResult;
          }
@@ -175,31 +134,31 @@ namespace Kontroller
             int error = Sock::System::getLastError();
             if (error != Sock::WouldBlock)
             {
-               return SocketResult::Error;
+               return Sock::Result::Error;
             }
          }
          else if (bytesReady == 0)
          {
             // Socket shut down by server
-            return SocketResult::Error;
+            return Sock::Result::Error;
          }
          else if (bytesReady != sizeof(EventPacket))
          {
-            return SocketResult::Timeout;
+            return Sock::Result::Timeout;
          }
 
          // Read the data
          EventPacket networkPacket;
          if (!receiveData(socket, reinterpret_cast<uint8_t*>(&networkPacket), sizeof(networkPacket), printErrors))
          {
-            return SocketResult::Error;
+            return Sock::Result::Error;
          }
 
          // Translate from network byte order to host byte order
          packet.type = Sock::Endian::networkToHostShort(networkPacket.type);
          packet.id = Sock::Endian::networkToHostShort(networkPacket.id);
          packet.value = Sock::Endian::networkToHostLong(networkPacket.value);
-         return SocketResult::Success;
+         return Sock::Result::Success;
       }
    }
 
@@ -301,13 +260,13 @@ namespace Kontroller
          while (!shuttingDown.load())
          {
             EventPacket packet;
-            SocketResult result = receivePacket(socket, packet, timeoutMS, printErrors);
+            Sock::Result result = receivePacket(socket, packet, timeoutMS, printErrors);
 
-            if (result == SocketResult::Success)
+            if (result == Sock::Result::Success)
             {
                updateState(packet);
             }
-            else if (result == SocketResult::Error)
+            else if (result == Sock::Result::Error)
             {
                break;
             }
