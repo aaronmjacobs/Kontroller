@@ -255,7 +255,7 @@ namespace Kontroller
       bool processLEDCommand(Device::Communicator& communicator, LED led, bool enable)
       {
          std::array<uint8_t, 3> sendData;
-         sendData[0] = 0xB0;
+         sendData[0] = kControlCommand;
          sendData[1] = static_cast<uint8_t>(idForLED(led));
          sendData[2] = enable ? 0x7F : 0x00;
 
