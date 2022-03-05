@@ -2,7 +2,7 @@
 
 #include <Windows.h>
 
-#include <string>
+#include <cstring>
 
 namespace Kontroller
 {
@@ -26,7 +26,10 @@ namespace Kontroller
          if (wMsg == MIM_DATA || wMsg == MIM_MOREDATA)
          {
             std::array<uint8_t, 3> values = decode(dwParam1);
-            communicator->onMessageReceived(values[1], values[2]);
+            if (values[0] == kControlCommand)
+            {
+               communicator->onMessageReceived(values[1], values[2]);
+            }
          }
          else if (wMsg == MIM_CLOSE)
          {
@@ -55,7 +58,7 @@ namespace Kontroller
                continue;
             }
 
-            if (std::string(inCapabilities.szPname) != deviceName)
+            if (std::strcmp(deviceName, inCapabilities.szPname) != 0)
             {
                continue;
             }
@@ -73,7 +76,7 @@ namespace Kontroller
                continue;
             }
 
-            if (std::string(outCapabilities.szPname) != deviceName)
+            if (std::strcmp(deviceName, outCapabilities.szPname) != 0)
             {
                continue;
             }

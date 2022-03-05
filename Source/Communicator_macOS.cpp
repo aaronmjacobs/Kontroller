@@ -2,7 +2,7 @@
 
 #include <CoreMIDI/MIDIServices.h>
 
-#include <string>
+#include <cstring>
 
 namespace Kontroller
 {
@@ -46,7 +46,7 @@ namespace Kontroller
          const MIDIPacket* packet = &pktlist->packet[0];
          for (UInt32 i = 0; i < pktlist->numPackets; ++i)
          {
-            if (packet->length == 3)
+            if (packet->length == 3 && packet->data[0] == kControlCommand)
             {
                communicator->onMessageReceived(packet->data[1], packet->data[2]);
             }
@@ -78,7 +78,7 @@ namespace Kontroller
             }
 
             const char* cstr = CFStringGetCStringPtr(name, kCFStringEncodingUTF8);
-            bool nameMatches = cstr && std::string(cstr) == deviceName;
+            bool nameMatches = cstr && std::strcmp(deviceName, cstr) == 0;
             CFRelease(name);
             if (!nameMatches)
             {
