@@ -444,6 +444,8 @@ namespace Kontroller
 
                if (!success)
                {
+                  while (commandQueue.pop());
+                  communicator.onConnectionLost();
                   break;
                }
             }
