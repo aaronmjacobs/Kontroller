@@ -6,7 +6,7 @@ Kontroller is a simple library to read input from and control the LEDs of the KO
 
 ### Platforms
 
-Windows and macOS are fully supported. Linux can read from the MIDI controller, but not write to it (control the LEDs).
+Kontroller works on Windows, macOS, and Linux.
 
 ### Build System
 
@@ -35,7 +35,7 @@ Plus, a handful of example targets:
 
 ### Dependencies
 
-Kontroller comes will all necessary dependencies as git submodules, which can be obtained via calls to `git submodule init` and `git submodule update`.
+Kontroller comes with some dependencies as git submodules, which can be obtained via calls to `git submodule init` and `git submodule update`. On Linux `libasound2-dev` is also required, and should be installed via your package manager.
 
 ## Usage
 

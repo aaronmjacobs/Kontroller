@@ -9,6 +9,8 @@
 
 namespace Kontroller
 {
+   constexpr uint8_t kControlCommand = 176;
+
    class Device::Communicator
    {
    public:

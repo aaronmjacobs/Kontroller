@@ -69,6 +69,9 @@ elseif (LINUX)
    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
    find_package(Threads REQUIRED)
    target_link_libraries(${PROJECT_NAME} PUBLIC Threads::Threads)
+
+   find_package(ALSA REQUIRED)
+   target_link_libraries(${PROJECT_NAME} PUBLIC ${ALSA_LIBRARIES})
 endif ()
 
 if (KONTROLLER_BUILD_SERVICE)
