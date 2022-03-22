@@ -1,6 +1,6 @@
 # Project definition
 cmake_minimum_required(VERSION 3.8)
-project(Kontroller VERSION 1.1.0 LANGUAGES CXX)
+project(Kontroller VERSION 1.2.0 LANGUAGES CXX)
 
 set(LINUX FALSE)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
