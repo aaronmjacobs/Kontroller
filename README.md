@@ -52,3 +52,9 @@ LEDs can be controlled by first calling `enableLEDControl()`, then calling `setL
 Crerate a `Kontroller::Server` to start the socket server. The server will manage a `Kontroller::Device` and host a TCP listen socket, and will automatically retry if creation of the listen socket fails. When a client connects, the server sends along the current total state. When any state changes, the server sends the updates to all connected clients. You can check the status of the server by calling `isListening()`.
 
 Create a `Kontroller::Client` to start a socket client. The client will attempt to connect to a server at the provided address, and will automatically retry if the connection fails. You can check the connection status by calling `isConnected()`. Similar to the `Kontroller::Device`, the current state can be queried by calling `getState()`, and callback functions are available (which fire on a separate thread).
+
+### Service
+
+The Windows service can be installed by running `KontrollerService.exe install`, and it can be uninstalled by running `KontrollerService.exe uninstall` (you may need to run your Command Prompt as administrator). Once installed, "Kontroller Server" will show up in Services, where it can be started / stopped. Note that the service runs through the KontrollerService.exe executable, so make sure to place it somewhere you don't mind keeping around.
+
+Running the service is the simplest way on Windows to use Kontroller, as it ensures there is always a `Kontroller::Server` running on your machine - any projects you write simply need to create a `Kontroller::Client` to interface with it.
