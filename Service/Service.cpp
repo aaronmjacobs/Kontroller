@@ -1,5 +1,7 @@
 #include "Service.h"
 
+#include <PlatformUtils/IOUtils.h>
+
 #include <cassert>
 
 namespace Kontroller
@@ -22,7 +24,17 @@ namespace Kontroller
       serviceStatusHandle = handle;
       updateServiceState(SERVICE_RUNNING);
 
-      server = std::make_unique<Server>();
+      // Don't serialize state if the do_not_serialize_state.txt file exists
+      Server::Settings settings;
+      if (std::optional<std::filesystem::path> doNotSerializeStatePath = IOUtils::getAbsoluteCommonAppDataPath("Kontroller", "do_not_serialize_state.txt"))
+      {
+         if (std::optional<std::string> doNotSerializeStateContent = IOUtils::readTextFile(doNotSerializeStatePath.value()))
+         {
+            settings.serializeStateToFile = false;
+         }
+      }
+
+      server = std::make_unique<Server>(settings);
    }
 
    void Service::onStop()

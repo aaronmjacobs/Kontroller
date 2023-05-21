@@ -5,10 +5,14 @@
 
 #include "Sock.h"
 
+#include <PlatformUtils/IOUtils.h>
+
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <optional>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -286,13 +290,72 @@ namespace Kontroller
 
          return success;
       }
+
+      std::optional<Kontroller::State> loadStateFromFile(const std::optional<std::filesystem::path>& path)
+      {
+         if (!path.has_value())
+         {
+            return std::nullopt;
+         }
+
+         std::optional<std::string> text = IOUtils::readTextFile(path.value());
+         if (!text.has_value())
+         {
+            return std::nullopt;
+         }
+
+         std::stringstream ss(text.value());
+
+         Kontroller::State state;
+         for (Kontroller::Group& group : state.groups)
+         {
+            ss >> group.dial;
+            if (ss.fail())
+            {
+               return std::nullopt;
+            }
+
+            ss >> group.slider;
+            if (ss.fail())
+            {
+               return std::nullopt;
+            }
+         }
+
+         return state;
+      }
+
+      bool saveStateToFile(const Kontroller::State& state, const std::optional<std::filesystem::path>& path)
+      {
+         if (!path.has_value())
+         {
+            return false;
+         }
+
+         std::stringstream ss;
+         ss.precision(std::numeric_limits<double>::digits10 + 1);
+
+         for (const Kontroller::Group& group : state.groups)
+         {
+            ss << group.dial << "\n" << group.slider << "\n\n";
+         }
+
+         return IOUtils::writeTextFile(path.value(), ss.str());
+      }
    }
 
-   Server::Server(int timeoutMilliseconds /*= 100*/, int retryMilliseconds /*= 1000*/, bool printErrorMessages /*= false*/)
-      : timeoutMS(timeoutMilliseconds)
-      , retryMS(retryMilliseconds)
-      , printErrors(printErrorMessages)
+   Server::Server(const Settings& serverSettings)
+      : settings(serverSettings)
+      , stateFilePath(serverSettings.filePathOverride.has_value() ? serverSettings.filePathOverride : IOUtils::getAbsoluteCommonAppDataPath("Kontroller", "state.txt"))
    {
+      if (settings.serializeStateToFile)
+      {
+         if (std::optional<Kontroller::State> loadedState = loadStateFromFile(stateFilePath))
+         {
+            state = loadedState.value();
+         }
+      }
+
       listenThread = std::thread([this]() { run(); });
    }
 
@@ -321,13 +384,13 @@ namespace Kontroller
 
          if (initializeResult != 0)
          {
-            if (printErrors)
+            if (settings.printErrorMessages)
             {
                fprintf(stderr, "Kontroller::Server - socket system startup failed with error: %d\n", initializeResult);
             }
 
             std::unique_lock<std::mutex> lock(shutDownMutex);
-            cv.wait_for(lock, std::chrono::milliseconds(retryMS), [this]
+            cv.wait_for(lock, std::chrono::milliseconds(settings.retryMilliseconds), [this]
             {
                return shuttingDown.load();
             });
@@ -337,6 +400,7 @@ namespace Kontroller
       if (!shuttingDown.load())
       {
          Device device;
+         device.setState(getState());
          setCallbacks(device);
 
          while (!shuttingDown.load())
@@ -374,12 +438,12 @@ namespace Kontroller
       Sock::Socket listenSocket = Sock::kInvalidSocket;
       while (listenSocket == Sock::kInvalidSocket && !shuttingDown.load())
       {
-         listenSocket = createListenSocket(printErrors);
+         listenSocket = createListenSocket(settings.printErrorMessages);
 
          if (listenSocket == Sock::kInvalidSocket)
          {
             std::unique_lock<std::mutex> lock(shutDownMutex);
-            cv.wait_for(lock, std::chrono::milliseconds(retryMS), [this]
+            cv.wait_for(lock, std::chrono::milliseconds(settings.retryMilliseconds), [this]
             {
                return shuttingDown.load();
             });
@@ -394,7 +458,7 @@ namespace Kontroller
       while (!shuttingDown.load())
       {
          // Wait until there is a socket ready to be accepted
-         Sock::Result pollResult = Sock::Helpers::poll(listenSocket, POLLRDNORM, timeoutMS, "Kontroller::Server", printErrors);
+         Sock::Result pollResult = Sock::Helpers::poll(listenSocket, POLLRDNORM, settings.timeoutMilliseconds, "Kontroller::Server", settings.printErrorMessages);
 
          if (pollResult == Sock::Result::Success && !shuttingDown.load())
          {
@@ -409,7 +473,7 @@ namespace Kontroller
             }
             else
             {
-               if (printErrors)
+               if (settings.printErrorMessages)
                {
                   fprintf(stderr, "Kontroller::Server - accept failed with error: %d\n", Sock::System::getLastError());
                }
@@ -422,6 +486,20 @@ namespace Kontroller
          }
 
          pruneThreads();
+
+         if (settings.serializeStateToFile && stateFilePath.has_value())
+         {
+            TimePoint stateUpdateTime = lastStateUpdateTime.load();
+            if (lastFileUpdateTime < stateUpdateTime)
+            {
+               TimePoint now = Clock().now();
+               if (now - stateUpdateTime > std::chrono::seconds(1))
+               {
+                  saveStateToFile(getState(), stateFilePath);
+                  lastFileUpdateTime = now;
+               }
+            }
+         }
       }
 
       listening.store(false);
@@ -441,7 +519,7 @@ namespace Kontroller
 
       int tcpNoDelay = 1;
       int optResult = Sock::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &tcpNoDelay, sizeof(tcpNoDelay));
-      if (optResult == Sock::kSocketError && printErrors)
+      if (optResult == Sock::kSocketError && settings.printErrorMessages)
       {
          fprintf(stderr, "Kontroller::Server - unable to disable the Nagle algorithm, connection may be jittery!\n");
       }
@@ -571,5 +649,6 @@ namespace Kontroller
    {
       std::lock_guard<std::mutex> lock(stateMutex);
       state = device.getState();
+      lastStateUpdateTime.store(Clock().now());
    }
 }

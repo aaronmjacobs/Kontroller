@@ -5,11 +5,14 @@
 #include <readerwriterqueue.h>
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -20,7 +23,18 @@ namespace Kontroller
    class Server
    {
    public:
-      Server(int timeoutMilliseconds = 100, int retryMilliseconds = 1000, bool printErrorMessages = false);
+      struct Settings
+      {
+         int timeoutMilliseconds = 100;
+         int retryMilliseconds = 1000;
+
+         bool serializeStateToFile = true;
+         std::optional<std::filesystem::path> filePathOverride;
+
+         bool printErrorMessages = false;
+      };
+
+      Server(const Settings& serverSettings = {});
       ~Server();
 
       State getState() const;
@@ -94,11 +108,15 @@ namespace Kontroller
       void setCallbacks(Device& device);
       void updateState(Device& device);
 
-      const int timeoutMS = 100;
-      const int retryMS = 1000;
-      const bool printErrors = false;
+      const Settings settings;
+      const std::optional<std::filesystem::path> stateFilePath;
+
+      using Clock = std::chrono::steady_clock;
+      using TimePoint = std::chrono::time_point<Clock>;
 
       State state;
+      std::atomic<TimePoint> lastStateUpdateTime;
+      TimePoint lastFileUpdateTime;
       mutable std::mutex stateMutex;
 
       std::condition_variable cv;

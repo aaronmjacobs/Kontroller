@@ -289,6 +289,12 @@ namespace Kontroller
       return state;
    }
 
+   void Device::setState(const State& newState)
+   {
+      std::lock_guard<std::mutex> lock(stateMutex);
+      state = newState;
+   }
+
    void Device::enableLEDControl(bool enable)
    {
       MidiCommand command;

@@ -2,7 +2,10 @@
 
 int main(int argc, char* argv[])
 {
-   Kontroller::Server server(100, 1000, true);
+   Kontroller::Server::Settings settings;
+   settings.printErrorMessages = true;
+
+   Kontroller::Server server(settings);
 
    while (!server.getState().stop)
    {

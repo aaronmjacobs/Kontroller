@@ -1,3 +1,6 @@
 [submodule "Libraries/readerwriterqueue"]
 	path = Libraries/readerwriterqueue
 	url = https://github.com/cameron314/readerwriterqueue
+[submodule "Libraries/PlatformUtils"]
+	path = Libraries/PlatformUtils
+	url = https://github.com/aaronmjacobs/PlatformUtils.git

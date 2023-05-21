@@ -25,6 +25,7 @@ namespace Kontroller
       }
 
       State getState() const;
+      void setState(const State& newState);
 
       void enableLEDControl(bool enable);
       void setLEDOn(LED led, bool on);

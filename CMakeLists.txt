@@ -58,6 +58,10 @@ target_include_directories(${PROJECT_NAME}
 get_target_property(SOURCE_FILES ${PROJECT_NAME} SOURCES)
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCE_FILES})
 
+# PlatformUtils
+add_subdirectory("${LIB_DIR}/PlatformUtils")
+target_link_libraries(${PROJECT_NAME} PUBLIC PlatformUtils)
+
 # Platform-specific dependencies
 if (APPLE)
    find_library(COREMIDI_LIBRARY CoreMidi)
