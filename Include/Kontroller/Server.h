@@ -32,6 +32,8 @@ namespace Kontroller
          std::optional<std::filesystem::path> filePathOverride;
 
          bool printErrorMessages = false;
+
+         Settings() {} // Needed due to an issue in clang (Default member initializer needed within definition of enclosing class outside of member functions)
       };
 
       Server(const Settings& serverSettings = {});
