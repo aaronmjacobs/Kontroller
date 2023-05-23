@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(Kontroller-Examples VERSION 0.1.0 LANGUAGES CXX)
+project(Kontroller-Examples VERSION 1.3.0 LANGUAGES CXX)
 
 add_executable("KontrollerExample-Client" "ClientExample.cpp")
 target_compile_features("KontrollerExample-Client" PRIVATE cxx_std_17)
