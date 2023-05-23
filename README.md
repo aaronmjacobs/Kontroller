@@ -49,7 +49,7 @@ LEDs can be controlled by first calling `enableLEDControl()`, then calling `setL
 
 ### Client / Server
 
-Crerate a `Kontroller::Server` to start the socket server. The server will manage a `Kontroller::Device` and host a TCP listen socket, and will automatically retry if creation of the listen socket fails. When a client connects, the server sends along the current total state. When any state changes, the server sends the updates to all connected clients. You can check the status of the server by calling `isListening()`.
+Crerate a `Kontroller::Server` to start the socket server. The server will manage a `Kontroller::Device` and host a TCP listen socket, and will automatically retry if creation of the listen socket fails. When a client connects, the server sends along the current total state. When any state changes, the server sends the updates to all connected clients. You can check the status of the server by calling `isListening()`. `Kontroller::Server` serializes dial / slider state to a text file by default, so that state can be maintained even if the server is restarted (see `Kontroller::Server::Settings`).
 
 Create a `Kontroller::Client` to start a socket client. The client will attempt to connect to a server at the provided address, and will automatically retry if the connection fails. You can check the connection status by calling `isConnected()`. Similar to the `Kontroller::Device`, the current state can be queried by calling `getState()`, and callback functions are available (which fire on a separate thread).
 
