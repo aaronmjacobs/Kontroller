@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(KontrollerService VERSION 1.3.0 LANGUAGES CXX)
+project(KontrollerService VERSION 1.4.0 LANGUAGES CXX)
 
 add_executable(${PROJECT_NAME} "Main.cpp" "Service.cpp" "Service.h")
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
