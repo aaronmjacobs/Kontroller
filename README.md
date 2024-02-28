@@ -55,6 +55,6 @@ Create a `Kontroller::Client` to start a socket client. The client will attempt 
 
 ### Service
 
-The Windows service can be installed by running `KontrollerService.exe install`, and it can be uninstalled by running `KontrollerService.exe uninstall` (you may need to run your Command Prompt as administrator). Once installed, "Kontroller Server" will show up in Services, where it can be started / stopped. Note that the service runs through the KontrollerService.exe executable, so make sure to place it somewhere you don't mind keeping around.
+The Windows service can be installed (to your Program Files directory) by running `KontrollerService.exe install`, and it can be uninstalled by running `KontrollerService.exe uninstall` (or `KontrollerService.exe uninstall /d` to also delete the service executable). Once installed, "Kontroller Server" will show up in Services, where it can be started / stopped.
 
 Running the service is the simplest way on Windows to use Kontroller, as it ensures there is always a `Kontroller::Server` running on your machine - any projects you write simply need to create a `Kontroller::Client` to interface with it.

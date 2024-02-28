@@ -1,39 +1,131 @@
 #include "Service.h"
 
+#include <PlatformUtils/IOUtils.h>
+#include <PlatformUtils/OSUtils.h>
+
 #include <chrono>
 #include <string>
 #include <thread>
 
+#include <shellapi.h>
+
 namespace
 {
-   const char* kServiceName = "KontrollerServer";
-   const char* kServiceDisplayName = "Kontroller Server";
-   const char* kServiceDescription = "Communicates with the KORG nanoKONTROL2 and hosts a socket server, allowing multiple outside processes to obtain MIDI data.";
+   const wchar_t* kServiceName = L"KontrollerServer";
+   const wchar_t* kServiceDisplayName = L"Kontroller Server";
+   const wchar_t* kServiceDescription = L"Communicates with the KORG nanoKONTROL2 and hosts a socket server, allowing multiple outside processes to obtain MIDI data.";
    const DWORD kServiceStartType = SERVICE_AUTO_START;
-   const char* kServiceDependencies = "";
-   const char* kServiceAccount = "NT AUTHORITY\\LocalService";
-   const char* kServicePassword = nullptr;
+   const wchar_t* kServiceDependencies = L"";
+   const wchar_t* kServiceAccount = L"NT AUTHORITY\\LocalService";
+   const wchar_t* kServicePassword = nullptr;
 
-   bool installService(LPCSTR lpServiceName, LPCSTR lpDisplayName, LPCSTR lpDescription, DWORD dwStartType, LPCSTR lpDependencies, LPCSTR lpAccount, LPCSTR lpPassword)
+   void printError(const char* name)
    {
-      char path[MAX_PATH];
-      if (GetModuleFileName(nullptr, path, ARRAYSIZE(path)) == 0)
+      fprintf(stderr, "%s failed with error: 0x%08lx\n", name, GetLastError());
+   }
+
+   bool isElevated()
+   {
+      bool elevated = false;
+
+      HANDLE hToken = nullptr;
+      if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
       {
-         fprintf(stderr, "GetModuleFileName failed with error: 0x%08lx\n", GetLastError());
+         TOKEN_ELEVATION elevation;
+         DWORD cbSize = sizeof(TOKEN_ELEVATION);
+         if (GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &cbSize))
+         {
+            elevated = elevation.TokenIsElevated;
+         }
+      }
+
+      if (hToken)
+      {
+         CloseHandle(hToken);
+      }
+
+      return elevated;
+   }
+
+   void runElevated(const WCHAR* params)
+   {
+      if (std::optional<std::filesystem::path> exePath = OSUtils::getExecutablePath())
+      {
+         std::wstring paramsString = L"/k " + exePath->wstring() + L" " + params;
+
+         SHELLEXECUTEINFOW shExInfo{};
+         shExInfo.cbSize = sizeof(shExInfo);
+         shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+         shExInfo.lpVerb = L"runas";
+         shExInfo.lpFile = L"cmd";
+         shExInfo.lpParameters = paramsString.c_str();
+         shExInfo.nShow = SW_SHOW;
+
+         if (ShellExecuteExW(&shExInfo) && shExInfo.hProcess != 0)
+         {
+            CloseHandle(shExInfo.hProcess);
+         }
+      }
+   }
+
+   std::optional<std::filesystem::path> getInstalledExePath()
+   {
+      return IOUtils::getAbsoluteKnownPath(OSUtils::KnownDirectory::CommonApplications, std::filesystem::path(KONTROLLER_PROJECT_NAME) / SERVICE_PROJECT_NAME ".exe");
+   }
+
+   bool installService(LPCWSTR lpServiceName, LPCWSTR lpDisplayName, LPCWSTR lpDescription, DWORD dwStartType, LPCWSTR lpDependencies, LPCWSTR lpAccount, LPCWSTR lpPassword)
+   {
+      std::optional<std::filesystem::path> exePath = OSUtils::getExecutablePath();
+      if (!exePath)
+      {
+         fprintf(stderr, "Failed to determine executable path\n");
          return false;
       }
 
+      std::filesystem::path exeName = exePath->filename();
+      if (exeName.empty())
+      {
+         fprintf(stderr, "Failed to determine executable name\n");
+         return false;
+      }
+
+      std::optional<std::filesystem::path> installedExePath = getInstalledExePath();
+      if (!installedExePath)
+      {
+         fprintf(stderr, "Failed to determine installed executable path\n");
+         return false;
+      }
+
+      if (*exePath != *installedExePath)
+      {
+         std::error_code errorCode;
+
+         std::filesystem::create_directories(installedExePath->parent_path(), errorCode);
+         if (errorCode)
+         {
+            fprintf(stderr, "Failed to create Program Files subdirectory: %s\n", errorCode.message().c_str());
+            return false;
+         }
+
+         std::filesystem::copy_file(*exePath, *installedExePath, errorCode);
+         if (errorCode)
+         {
+            fprintf(stderr, "Failed to copy executable to Program Files: %s\n", errorCode.message().c_str());
+            return false;
+         }
+      }
+
       // Open the local default service control manager database
-      SC_HANDLE schSCManager = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT | SC_MANAGER_CREATE_SERVICE);
+      SC_HANDLE schSCManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT | SC_MANAGER_CREATE_SERVICE);
       if (schSCManager == nullptr)
       {
-         fprintf(stderr, "OpenSCManager failed with error: 0x%08lx\n", GetLastError());
+         printError("OpenSCManager");
          return false;
       }
 
       // Install the service into SCM by calling CreateService
       DWORD access = SERVICE_QUERY_STATUS | SERVICE_CHANGE_CONFIG | SERVICE_START;
-      SC_HANDLE schService = CreateService(
+      SC_HANDLE schService = CreateServiceW(
          schSCManager,                   // SCManager database
          lpServiceName,                  // Name of service
          lpDisplayName,                  // Name to display
@@ -41,7 +133,7 @@ namespace
          SERVICE_WIN32_OWN_PROCESS,      // Service type
          dwStartType,                    // Service start type
          SERVICE_ERROR_NORMAL,           // Error control type
-         path,                           // Service's binary
+         installedExePath->c_str(),      // Service's binary
          nullptr,                        // No load ordering group
          nullptr,                        // No tag identifier
          lpDependencies,                 // Dependencies
@@ -50,30 +142,30 @@ namespace
       );
       if (schService == nullptr)
       {
-         fprintf(stderr, "CreateService failed with error 0x%08lx\n", GetLastError());
+         printError("CreateService");
 
          CloseServiceHandle(schSCManager);
          return false;
       }
 
       // Set the service description
-      SERVICE_DESCRIPTION serviceDescription = {};
-      std::string description = lpDescription;
+      SERVICE_DESCRIPTIONW serviceDescription = {};
+      std::wstring description = lpDescription;
       serviceDescription.lpDescription = description.data();
-      if (!ChangeServiceConfig2(schService, SERVICE_CONFIG_DESCRIPTION, &serviceDescription))
+      if (!ChangeServiceConfig2W(schService, SERVICE_CONFIG_DESCRIPTION, &serviceDescription))
       {
-         fprintf(stderr, "ChangeServiceConfig2 failed with error: 0x%08lx\n", GetLastError());
+         printError("ChangeServiceConfig2");
       }
 
-      printf("%s has been installed\n", lpServiceName);
+      printf("%ls has been installed to %ls\n", lpServiceName, installedExePath->c_str());
 
-      if (StartService(schService, 0, nullptr))
+      if (StartServiceW(schService, 0, nullptr))
       {
-         printf("%s has been started\n", lpServiceName);
+         printf("%ls has been started\n", lpServiceName);
       }
       else
       {
-         fprintf(stderr, "StartService failed with error 0x%08lx\n", GetLastError());
+         printError("StartService");
       }
 
       CloseServiceHandle(schService);
@@ -82,21 +174,21 @@ namespace
       return true;
    }
 
-   bool uninstallService(LPCSTR lpServiceName)
+   bool uninstallService(LPCWSTR lpServiceName)
    {
       // Open the local default service control manager database
-      SC_HANDLE schSCManager = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
+      SC_HANDLE schSCManager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
       if (schSCManager == nullptr)
       {
-         fprintf(stderr, "OpenSCManager failed with error: 0x%08lx\n", GetLastError());
+         printError("OpenSCManager");
          return false;
       }
 
       // Open the service with delete, stop, and query status permissions
-      SC_HANDLE schService = OpenService(schSCManager, lpServiceName, SERVICE_STOP | SERVICE_QUERY_STATUS | DELETE);
+      SC_HANDLE schService = OpenServiceW(schSCManager, lpServiceName, SERVICE_STOP | SERVICE_QUERY_STATUS | DELETE);
       if (schService == nullptr)
       {
-         fprintf(stderr, "OpenService failed with error: 0x%08lx\n", GetLastError());
+         printError("OpenService");
 
          CloseServiceHandle(schSCManager);
          return false;
@@ -106,7 +198,7 @@ namespace
       SERVICE_STATUS ssSvcStatus = {};
       if (ControlService(schService, SERVICE_CONTROL_STOP, &ssSvcStatus))
       {
-         printf("Stopping %s", lpServiceName);
+         printf("Stopping %ls", lpServiceName);
          std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
          while (QueryServiceStatus(schService, &ssSvcStatus))
@@ -124,28 +216,78 @@ namespace
 
          if (ssSvcStatus.dwCurrentState == SERVICE_STOPPED)
          {
-            printf("\n%s has been stopped\n", lpServiceName);
+            printf("\n%ls has been stopped\n", lpServiceName);
          }
          else
          {
-            printf("\n%s failed to stop\n", lpServiceName);
+            printf("\n%ls failed to stop\n", lpServiceName);
+
+            CloseServiceHandle(schService);
+            CloseServiceHandle(schSCManager);
+            return false;
          }
       }
-
-      // Now remove the service by calling DeleteService.
-      if (!DeleteService(schService))
+      else
       {
-         fprintf(stderr, "DeleteService failed with error: 0x%08lx\n", GetLastError());
+         printf("%ls failed to stop\n", lpServiceName);
 
          CloseServiceHandle(schService);
          CloseServiceHandle(schSCManager);
          return false;
       }
 
-      printf("%s has been uninstalled\n", lpServiceName);
+      // Now remove the service by calling DeleteService.
+      if (!DeleteService(schService))
+      {
+         printError("DeleteService");
+
+         CloseServiceHandle(schService);
+         CloseServiceHandle(schSCManager);
+         return false;
+      }
+
+      printf("%ls has been uninstalled\n", lpServiceName);
 
       CloseServiceHandle(schService);
       CloseServiceHandle(schSCManager);
+
+      return true;
+   }
+
+   bool deleteServiceExecutable()
+   {
+      std::optional<std::filesystem::path> installedExePath = getInstalledExePath();
+      if (!installedExePath)
+      {
+         fprintf(stderr, "Failed to determine installed executable path\n");
+         return false;
+      }
+
+      if (std::filesystem::exists(*installedExePath))
+      {
+         std::error_code errorCode;
+         std::filesystem::remove(*installedExePath, errorCode);
+         if (errorCode)
+         {
+            fprintf(stderr, "Failed to delete installed executable: %s\n", errorCode.message().c_str());
+            return false;
+         }
+
+         printf("%ls has been deleted\n", installedExePath->c_str());
+
+         std::filesystem::path installedExeDirectory = installedExePath->parent_path();
+         if (!installedExeDirectory.empty() && std::filesystem::is_directory(installedExeDirectory))
+         {
+            std::filesystem::remove(installedExeDirectory, errorCode);
+            if (errorCode)
+            {
+               fprintf(stderr, "Failed to delete installed executable directory: %s\n", errorCode.message().c_str());
+               return false;
+            }
+
+            printf("%ls has been deleted\n", installedExeDirectory.c_str());
+         }
+      }
 
       return true;
    }
@@ -173,12 +315,12 @@ namespace
       }
    }
 
-   VOID WINAPI serviceMain(DWORD dwArgc, LPSTR* lpszArgv)
+   VOID WINAPI serviceMain(DWORD dwArgc, LPWSTR* lpszArgv)
    {
-      SERVICE_STATUS_HANDLE handle = RegisterServiceCtrlHandler(kServiceName, serviceControlHandler);
+      SERVICE_STATUS_HANDLE handle = RegisterServiceCtrlHandlerW(kServiceName, serviceControlHandler);
       if (!handle)
       {
-         fprintf(stderr, "RegisterServiceCtrlHandler failed\n");
+         printError("RegisterServiceCtrlHandler");
          return;
       }
 
@@ -194,27 +336,46 @@ int main(int argc, char* argv[])
       std::string command(argv[1]);
       if (command == "install")
       {
-         success = installService(kServiceName, kServiceDisplayName, kServiceDescription, kServiceStartType, kServiceDependencies, kServiceAccount, kServicePassword);
+         if (isElevated())
+         {
+            success = installService(kServiceName, kServiceDisplayName, kServiceDescription, kServiceStartType, kServiceDependencies, kServiceAccount, kServicePassword);
+         }
+         else
+         {
+            runElevated(L"install");
+         }
       }
       else if (command == "uninstall")
       {
-         success = uninstallService(kServiceName);
+         bool deleteExecutable = argc > 2 && std::strcmp("/d", argv[2]) == 0;
+         if (isElevated())
+         {
+            success = uninstallService(kServiceName);
+            if (deleteExecutable)
+            {
+               success &= deleteServiceExecutable();
+            }
+         }
+         else
+         {
+            runElevated(deleteExecutable ? L"uninstall /d" : L"uninstall");
+         }
       }
       else
       {
-         printf("Usage: %s [install | uninstall]\n", argv[0]);
+         printf("Usage: %s [install | uninstall [/d]]\n", argv[0]);
       }
 
       return success ? 0 : 1;
    }
 
-   std::string serviceName = kServiceName;
-   SERVICE_TABLE_ENTRY serviceTable[] =
+   std::wstring serviceName = kServiceName;
+   SERVICE_TABLE_ENTRYW serviceTable[] =
    {
       { serviceName.data(), serviceMain },
       { nullptr, nullptr }
    };
 
-   bool started = StartServiceCtrlDispatcher(serviceTable) != 0;
+   bool started = StartServiceCtrlDispatcherW(serviceTable) != 0;
    return started ? 0 : 1;
 }

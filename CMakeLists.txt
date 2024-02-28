@@ -7,6 +7,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
    set(LINUX TRUE)
 endif ()
 
+set(KONTROLLER_PROJECT_NAME "${PROJECT_NAME}")
+
 # Build options
 option(KONTROLLER_BUILD_SERVICE "Build the Kontroller service" OFF)
 option(KONTROLLER_BUILD_EXAMPLES "Build the Kontroller example programs" OFF)
