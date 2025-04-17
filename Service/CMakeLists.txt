@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(KontrollerService VERSION 1.4.0 LANGUAGES CXX)
 
 add_executable(${PROJECT_NAME} "Main.cpp" "Service.cpp" "Service.h")

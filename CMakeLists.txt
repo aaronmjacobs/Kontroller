@@ -1,5 +1,5 @@
 # Project definition
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(Kontroller VERSION 1.4.0 LANGUAGES CXX)
 
 set(LINUX FALSE)

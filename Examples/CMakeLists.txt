@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(Kontroller-Examples VERSION 1.4.0 LANGUAGES CXX)
 
 add_executable("KontrollerExample-Client" "ClientExample.cpp")
